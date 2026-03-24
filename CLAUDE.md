@@ -1,5 +1,5 @@
 # RECURSIVE SOFTWARE FOUNDRY — CLAUDE CODE MASTER SPECIFICATION
-## Version: 1.0.0 | Environment: Windows 11 + WSL2 | Status: V1 Build
+## Version: 1.1.0 | Environment: Windows 11 + WSL2 | Status: V1 Build
 
 ---
 
@@ -20,6 +20,8 @@ These rules are non-negotiable and override any default Claude Code behavior:
 11. **NEVER use SELECT * in any database query — always name columns explicitly.** Schema changes should only break agents that use changed columns, not every agent.
 12. **Every governance API response MUST include a `schema_version` field** (currently `"2"` after V2 migration). Consumers use this to detect schema drift.
 13. **All agent database queries MUST use explicit column lists.** This is the agent-layer enforcement of rule 11.
+14. **Every Flyway migration MUST be accompanied by updates to the DATABASE SCHEMA and AUDIT LOG SPECIFICATION sections in this file.** A migration is not complete until its columns are documented here. This prevents documentation drift.
+15. **Every spec file modification MUST include a version bump in the file header.** After committing spec changes, tag the commit with `git tag spec-v{VERSION}`. The spec integrity gate validates that the in-file version matches the latest git tag.
 
 ---
 
@@ -372,7 +374,7 @@ Before writing any agent logic, write and pass these cross-layer contract tests:
 Contract 1: TypeScript → PostgreSQL
   - Can connect using env vars (not hardcoded credentials)
   - Can create a table, insert a row, query it, delete it
-  - pgvector extension is loaded (SELECT * FROM pg_extension WHERE extname = 'vector')
+  - pgvector extension is loaded (SELECT extname, extversion FROM pg_extension WHERE extname = 'vector')
   - Can store and query a 1536-dimension vector
 
 Contract 2: TypeScript → Redis
@@ -456,7 +458,13 @@ CREATE TABLE agent_events (
     duration_ms     INTEGER,
     status          VARCHAR(50) NOT NULL, -- SUCCESS | FAILURE | KILLED | TIMEOUT
     error_message   TEXT,
-    parent_event_id UUID
+    parent_event_id UUID,
+
+    -- V2: Data flywheel columns (V2__data_flywheel_columns.sql)
+    workload_id     VARCHAR(255),          -- logical task type for fine-tuning isolation
+    reasoning_trace TEXT,                   -- chain-of-thought storage for training signal
+    context_utilization_pct FLOAT,          -- tokens_in / model_context_limit
+    router_classification_reason TEXT       -- why the router chose that tier
 );
 
 -- Vector memory for semantic search
@@ -488,7 +496,11 @@ CREATE TABLE artifacts (
     parent_id       UUID,   -- lineage tracking
     created_by      VARCHAR(255), -- which agent created it
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    metadata        JSONB
+    metadata        JSONB,
+
+    -- V2: Data flywheel columns (V2__data_flywheel_columns.sql)
+    test_results_breakdown JSONB,           -- per-test-case pass/fail array
+    spec_similarity_score  FLOAT            -- cosine distance to nearest past spec
 );
 
 -- Agent blueprints (self-provisioning)
@@ -516,6 +528,7 @@ CREATE INDEX ON memory_entries USING ivfflat (embedding vector_cosine_ops)
     WITH (lists = 100);
 CREATE INDEX ON artifacts (artifact_type, created_at);
 CREATE INDEX ON agent_blueprints (generation, benchmark_score);
+CREATE INDEX ON agent_events (workload_id);
 ```
 
 ---
@@ -571,7 +584,11 @@ Every entry in `audit.jsonl` and `agent_events` table must include:
   "duration_ms": 4200,
   "status": "SUCCESS | FAILURE | KILLED | TIMEOUT",
   "error_message": null,
-  "parent_event_id": "uuid-v4-of-parent-action"
+  "parent_event_id": "uuid-v4-of-parent-action",
+  "workload_id": "spec-interpret-compound-interest",
+  "reasoning_trace": "Task requires financial math → classify as STANDARD → route to qwen2.5-coder:14b",
+  "context_utilization_pct": 0.42,
+  "router_classification_reason": "Single-function generation with domain math — STANDARD tier sufficient"
 }
 ```
 
@@ -727,6 +744,7 @@ Do not build these until explicitly instructed. Scope creep will prevent V1 from
 - **No web UI** — CLI and REST API only in V1
 - **No fine-tuning of models** — inference only
 - **No external internet access from within agent sandboxes** — sandboxes are network-isolated
+- **No web monitoring dashboard** — read-only web dashboard with dual-key kill switch. Requires authentication layer. Deferred to V2.
 
 ---
 

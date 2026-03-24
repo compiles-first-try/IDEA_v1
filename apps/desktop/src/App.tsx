@@ -1,23 +1,21 @@
 import { useThemeStore } from "./store/theme.ts";
+import { TopBar } from "./components/layout/TopBar.tsx";
+import { Sidebar } from "./components/layout/Sidebar.tsx";
+import { MainPanel } from "./components/layout/MainPanel.tsx";
 
 function App() {
   const theme = useThemeStore((s) => s.theme);
+  const themeClass = theme === "light" ? "light" : "";
 
   return (
     <div
-      className={`min-h-screen ${theme === "dark" ? "bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]" : "bg-white text-gray-900"}`}
+      className={`${themeClass} flex h-screen flex-col bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]`}
     >
-      <header className="flex items-center justify-between border-b border-[var(--color-border)] px-6 py-3">
-        <h1 className="text-lg font-semibold">Recursive Software Foundry</h1>
-        <span className="text-sm text-[var(--color-text-secondary)]">
-          v1.0.0 — Governance Dashboard
-        </span>
-      </header>
-      <main className="p-6">
-        <p className="text-[var(--color-text-secondary)]">
-          Dashboard loading…
-        </p>
-      </main>
+      <TopBar />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar />
+        <MainPanel />
+      </div>
     </div>
   );
 }

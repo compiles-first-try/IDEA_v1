@@ -85,7 +85,11 @@
       "Bash(chmod +x /home/nicknoel251289/Projects/IDEA_v1/scripts/ui-gate4-component-contracts.sh)",
       "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/ui-gate4-component-contracts.sh)",
       "Bash(sed -n '/^## CRITICAL OPERATING RULES/,/^---$/p' /home/nicknoel251289/Projects/IDEA_v1/CLAUDE.md)",
-      "Bash(sed -n '/^## CRITICAL OPERATING RULES/,/^---$/p' /home/nicknoel251289/Projects/IDEA_v1/UI_CLAUDE.md)"
+      "Bash(sed -n '/^## CRITICAL OPERATING RULES/,/^---$/p' /home/nicknoel251289/Projects/IDEA_v1/UI_CLAUDE.md)",
+      "Bash(chmod +x /home/nicknoel251289/Projects/IDEA_v1/scripts/ui-gate5-phase-validate.sh)",
+      "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/ui-gate5-phase-validate.sh UI_PHASE_1_SHELL)",
+      "Bash(chmod:*)",
+      "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/spec-integrity-check.sh)"
     ]
   }
 }

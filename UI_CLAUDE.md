@@ -1,5 +1,5 @@
 # RSF DESKTOP UI — CLAUDE CODE BUILD SPECIFICATION
-## Version: 1.0.0 | Package: apps/desktop | Status: V1 Build
+## Version: 1.1.0 | Package: apps/desktop | Status: V1 Build
 
 ---
 
@@ -17,6 +17,8 @@
 10. jsdom does not implement scroll APIs — guard all scrollIntoView calls with typeof checks. Pattern established in AuditStream component (UI Gate 4).
 11. NEVER use SELECT * in any database query — always name columns explicitly. This is a CDC-readiness rule that ensures schema changes only break components that use changed columns.
 12. All governance API responses consumed by the UI MUST check for a schema_version field. If schema_version does not match the expected version, show a warning banner: "Backend schema has been updated. Some features may behave unexpectedly until the UI is rebuilt."
+13. Every schema change (Flyway migration) that affects governance API responses MUST trigger a review of the PROJECT CONTEXT endpoint list and any API type definitions in the UI codebase. Schema drift between backend and frontend is a CDC-readiness violation.
+14. Every spec file modification MUST include a version bump in the file header. After committing spec changes, tag the commit with `git tag spec-v{VERSION}`. The spec integrity gate validates that the in-file version matches the latest git tag.
 
 ---
 
@@ -32,6 +34,15 @@ The foundry has a working governance REST API at `http://localhost:3000` (Expres
 - `POST /governance/improve` — trigger self-improvement cycle
 - `GET /governance/config` — current configuration
 - `PATCH /governance/config` — update configuration
+- `GET /governance/artifacts` — paginated artifact list
+- `GET /governance/agents` — agent blueprints
+- `POST /governance/feedback/validate` — submit feedback for validation (does NOT write to DB)
+- `POST /governance/feedback/confirm` — confirm feedback after validation
+- `POST /governance/docs/ingest` — ingest document into knowledge base
+- `GET /governance/docs` — list ingested documents
+- `POST /governance/models/pull` — pull Ollama model (SSE progress)
+- `GET /governance/models` — list available models
+- `ws://localhost:3000/audit-stream` — real-time audit event WebSocket
 
 The UI connects to this API. It does not bypass it.
 
@@ -267,15 +278,23 @@ All 6 contracts must pass before building remaining components.
 
 ## UI GATE 5 — PHASE COMPLETION VALIDATION
 
-At the end of each UI phase:
+At the end of each UI phase, run these checks. All must pass.
+
+WSL2-side checks (run in every phase):
 - All Vitest tests pass (0 failures)
 - All component contracts pass
 - TypeScript compiles with 0 errors
 - No hardcoded API URLs (all from config)
 - No hardcoded colors (all from theme tokens)
-- Tauri app builds without errors: `pnpm tauri build --debug`
-- App launches on the current OS
+- Vite production build completes without errors: `pnpm vite build`
 - Kill switch is visible and functional
+
+Windows-side checks (run in UI Phase 6 packaging only):
+- Tauri app builds without errors: `pnpm tauri build --debug` (run from Windows PowerShell)
+- App launches on Windows and displays the shell correctly
+- Kill switch is clickable and triggers confirmation modal
+
+Note: Tauri cannot render a window inside WSL2 (no display server). The WSL2-side checks validate all logic and compilation. The Windows-side checks validate the native desktop shell and are deferred to Phase 6 packaging.
 
 ---
 
@@ -338,24 +357,25 @@ Layout preference persisted to Zustand.
 ## LAYOUT — SIDEBAR NAVIGATION SECTIONS
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  TOP BAR                                                │
-│  [RSF]  Status: ● Running  Spend: $0.00/day  [■ STOP]  │
-├──────────┬──────────────────────────────────────────────┤
-│ SIDEBAR  │  MAIN CONTENT AREA                          │
-│          │                                              │
-│ ● Build  │  (changes based on sidebar selection)       │
-│ ● Audit  │                                              │
-│ ● Agents │                                              │
-│ ● Models │                                              │
-│ ● Improve│                                              │
-│ ● Docs   │                                              │
-│ ● Config │                                              │
-│          │                                              │
-│ ────     │                                              │
-│ ◑ Theme  │                                              │
-│ ⊞ Layout │                                              │
-└──────────┴──────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│  TOP BAR                                                 │
+│  [RSF]  Status: ● Running  Spend: $0.00/day  [■ STOP]   │
+├──────────┬───────────────────────────────────────────────┤
+│ SIDEBAR  │  MAIN CONTENT AREA                           │
+│          │                                               │
+│ ● Build  │  (changes based on sidebar selection)        │
+│ ● Audit  │                                               │
+│ ● Agents │                                               │
+│ ● Models │                                               │
+│ ● Improve│                                               │
+│ ● Docs   │                                               │
+│ ● Config │                                               │
+│ ● Feedback│                                              │
+│          │                                               │
+│ ────     │                                               │
+│ ◑ Theme  │                                               │
+│ ⊞ Layout │                                               │
+└──────────┴───────────────────────────────────────────────┘
 ```
 
 ---
@@ -790,6 +810,7 @@ Document these in a `ROADMAP.md` at the root of `apps/desktop/`:
 - Hallucination detection panel — semantic entropy scoring, self-consistency checking
 - Karpathy Loop / context engineering — explicit context window management UI
 - Agent creation wizard — define new agents from the UI
+- **Web monitoring dashboard** — A read-only web-accessible dashboard (separate from the Tauri desktop app) showing platform health, agent health/execution status, audit stream, and observable system data. Includes a dual-key kill switch requiring two authenticated users to activate (two-person integrity pattern). Rationale: the Tauri desktop app is the full-control cockpit for a single operator; the web dashboard is a control-tower view for team visibility and emergency response. Requires authentication layer (not present in V1) and a pending-kill-request table with expiry logic.
 
 ### V3 Features
 - Lower environments — dev/staging/prod environment selector with isolated databases

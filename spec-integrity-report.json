@@ -1,0 +1,11 @@
+{
+  "gate": "Spec Integrity Check",
+  "timestamp": "2026-03-24T16:38:50.000Z",
+  "summary": {
+    "total": 6,
+    "passed": 5,
+    "failed": 0,
+    "warnings": 1
+  },
+  "results": [{"check": "No SELECT * in CLAUDE.md", "status": "PASS", "detail": "Zero violations of Rule 11 in spec text"},{"check": "Nav route count", "status": "PASS", "detail": "Diagram (9) matches NavRoute type (9)"},{"check": "DB columns documented", "status": "PASS", "detail": "All V2 columns present in CLAUDE.md DATABASE SCHEMA"},{"check": "API endpoints documented", "status": "PASS", "detail": "15 documented >= 7 implemented"},{"check": "Version tag match", "status": "WARN", "detail": "No spec-v* tags exist yet — skipping (CLAUDE.md version: 1.1.0)"},{"check": "Spec versions match", "status": "PASS", "detail": "Both files at v1.1.0"}]
+}
