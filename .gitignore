@@ -1,0 +1,53 @@
+# Environment secrets
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# pnpm
+.pnpm-store/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+*.egg
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.hypothesis/
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+docker-compose.override.yml
+
+# Gate reports (generated)
+gate1-report.json
+gate2-report.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Gate reports (UI gates)
+ui-gate*-report.json
+
+# Tauri build output
+apps/desktop/src-tauri/target/

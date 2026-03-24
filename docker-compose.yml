@@ -1,0 +1,117 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: rsf-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rsf_user
+      POSTGRES_PASSWORD: rsf_password
+      POSTGRES_DB: rsf_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - rsf_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rsf_user -d rsf_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: rsf-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - rsf_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  temporal:
+    image: temporalio/auto-setup:1.24
+    container_name: rsf-temporal
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=rsf_user
+      - POSTGRES_PWD=rsf_password
+      - POSTGRES_SEEDS=postgres
+    ports:
+      - "7233:7233"
+    healthcheck:
+      test: ["CMD-SHELL", "temporal operator cluster health --address $$(hostname -i):7233"]
+      interval: 10s
+      timeout: 10s
+      retries: 24
+      start_period: 40s
+
+  temporal-ui:
+    image: temporalio/ui:2.26.2
+    container_name: rsf-temporal-ui
+    restart: unless-stopped
+    depends_on:
+      temporal:
+        condition: service_healthy
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:8080
+    ports:
+      - "8080:8080"
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.58
+    container_name: rsf-jaeger
+    restart: unless-stopped
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+      - "4317:4317"
+      - "4318:4318"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:16686/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Ollama: use profile "ollama" to start containerized Ollama.
+  # By default the gate script checks the host Ollama at localhost:11434.
+  # Only use this container if the host Ollama is not running.
+  ollama:
+    image: ollama/ollama:latest
+    container_name: rsf-ollama
+    restart: unless-stopped
+    profiles:
+      - ollama
+    ports:
+      - "11435:11434"
+    volumes:
+      - rsf_ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+volumes:
+  rsf_pgdata:
+  rsf_redis:
+  rsf_ollama:

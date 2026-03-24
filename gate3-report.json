@@ -1,0 +1,47 @@
+{
+  "gate": "Gate 3 — Infrastructure Health",
+  "timestamp": "2026-03-23T13:25:51.000Z",
+  "summary": {
+    "total": 12,
+    "passed": 12,
+    "failed": 0
+  },
+  "results": [{"check": "Docker Compose start", "status": "PASS", "detail": "All services started"},{"check": "postgres health", "status": "PASS", "detail": "Container rsf-postgres reached HEALTHY"},{"check": "redis health", "status": "PASS", "detail": "Container rsf-redis reached HEALTHY"},{"check": "temporal health", "status": "PASS", "detail": "Container rsf-temporal reached HEALTHY"},{"check": "jaeger health", "status": "PASS", "detail": "Container rsf-jaeger reached HEALTHY"},{"check": "temporal-ui running", "status": "PASS", "detail": "Container rsf-temporal-ui is running"},{"check": "Ollama reachable", "status": "PASS", "detail": "Host Ollama responding at localhost:11434"},{"check": "PostgreSQL connectivity", "status": "PASS", "detail": "Accepting connections as rsf_user on rsf_db"},{"check": "pgvector extension", "status": "PASS", "detail": "pgvector extension loaded in rsf_db"},{"check": "Redis connectivity", "status": "PASS", "detail": "redis-cli ping returned PONG"},{"check": "Temporal connectivity", "status": "PASS", "detail": "Temporal cluster is serving"},{"check": "Jaeger UI", "status": "PASS", "detail": "Jaeger UI accessible at localhost:16686 (HTTP 200)"}],
+  "services": {
+    "postgres": {
+      "container": "rsf-postgres",
+      "image": "pgvector/pgvector:pg16",
+      "port": 5432,
+      "extensions": ["vector"]
+    },
+    "redis": {
+      "container": "rsf-redis",
+      "image": "redis:7.2-alpine",
+      "port": 6379
+    },
+    "temporal": {
+      "container": "rsf-temporal",
+      "image": "temporalio/auto-setup:1.24",
+      "port": 7233
+    },
+    "temporal_ui": {
+      "container": "rsf-temporal-ui",
+      "image": "temporalio/ui:2.26.2",
+      "port": 8080
+    },
+    "jaeger": {
+      "container": "rsf-jaeger",
+      "image": "jaegertracing/all-in-one:1.58",
+      "ports": {
+        "ui": 16686,
+        "collector": 14268,
+        "otlp_grpc": 4317,
+        "otlp_http": 4318
+      }
+    },
+    "ollama": {
+      "type": "host",
+      "url": "http://localhost:11434"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "gate": "Gate 4 — Cross-Layer Contract Tests",
+  "timestamp": "2026-03-23T13:47:25.000Z",
+  "summary": {
+    "total": 8,
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0
+  },
+  "results": [{"contract": " TypeScript → PostgreSQL", "status": "PASS", "detail": "All tests passed"},{"contract": " TypeScript → Redis", "status": "PASS", "detail": "All tests passed"},{"contract": " TypeScript → Ollama", "status": "PASS", "detail": "All tests passed"},{"contract": " TypeScript → Anthropic API", "status": "PASS", "detail": "2 passed, 1 skipped"},{"contract": " TypeScript → Audit Log", "status": "PASS", "detail": "All tests passed"},{"contract": "Contract 5: TypeScript → Temporal", "status": "PASS", "detail": "3 passed (via tsx)"},{"contract": " Python → Ollama", "status": "PASS", "detail": "4 passed"},{"contract": " Python → Anthropic API", "status": "PASS", "detail": "1 passed, 2 skipped"}]
+}

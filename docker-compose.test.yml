@@ -1,0 +1,31 @@
+services:
+  postgres-test:
+    image: pgvector/pgvector:pg16
+    container_name: rsf-postgres-test
+    environment:
+      POSTGRES_USER: rsf_test_user
+      POSTGRES_PASSWORD: rsf_test_password
+      POSTGRES_DB: rsf_test_db
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rsf_test_user -d rsf_test_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  redis-test:
+    image: redis:7.2-alpine
+    container_name: rsf-redis-test
+    ports:
+      - "6380:6379"
+    tmpfs:
+      - /data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 10

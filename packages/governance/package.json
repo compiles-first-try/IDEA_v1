@@ -1,0 +1,38 @@
+{
+  "name": "@rsf/governance",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Layer 7 — REST API, audit dashboard, runtime configuration",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rsf/foundation": "workspace:*",
+    "@rsf/orchestration": "workspace:*",
+    "dotenv": "^17.3.1",
+    "express": "^4.21.0",
+    "helmet": "^8.0.0",
+    "ioredis": "^5.10.1",
+    "pg": "^8.20.0",
+    "pino": "^9.0.0",
+    "ws": "^8.20.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.20.0",
+    "@types/ws": "^8.18.1",
+    "fast-check": "^3.19.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}

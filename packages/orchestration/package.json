@@ -1,0 +1,42 @@
+{
+  "name": "@rsf/orchestration",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Layer 2 — Mastra agents, LangGraph workflows, Temporal durability, model router, behavioral contracts, kill switch",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
+    "@langchain/langgraph": "^1.2.5",
+    "@mastra/core": "^1.15.0",
+    "@rsf/foundation": "workspace:*",
+    "@temporalio/activity": "^1.15.0",
+    "@temporalio/client": "^1.15.0",
+    "@temporalio/worker": "^1.15.0",
+    "@temporalio/workflow": "^1.15.0",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.0",
+    "helmet": "^8.0.0",
+    "ioredis": "^5.4.0",
+    "ollama": "^0.6.3",
+    "pino": "^9.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.0.0",
+    "fast-check": "^3.19.0",
+    "testcontainers": "^11.13.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}

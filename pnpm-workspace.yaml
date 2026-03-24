@@ -1,0 +1,9 @@
+packages:
+  - "packages/foundation"
+  - "packages/orchestration"
+  - "packages/manufacturing"
+  - "packages/quality/typescript"
+  - "packages/provisioning"
+  - "packages/meta-improvement/typescript"
+  - "packages/governance"
+  - "apps/desktop"

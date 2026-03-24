@@ -1,0 +1,32 @@
+[project]
+name = "rsf-provisioning-python"
+version = "1.0.0"
+description = "Layer 5 Python — DSPy MIPROv2 prompt optimization"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.30.0",
+    "dspy>=2.5.0",
+    "ollama>=0.3.0",
+    "pytest>=8.2.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.10.0",
+    "ruff>=0.4.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["prompt_optimizer*"]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
