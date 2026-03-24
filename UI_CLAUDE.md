@@ -1,5 +1,5 @@
 # RSF DESKTOP UI — CLAUDE CODE BUILD SPECIFICATION
-## Version: 1.1.0 | Package: apps/desktop | Status: V1 Build
+## Version: 1.3.0 | Package: apps/desktop | Status: V1 Build
 
 ---
 
@@ -19,6 +19,7 @@
 12. All governance API responses consumed by the UI MUST check for a schema_version field. If schema_version does not match the expected version, show a warning banner: "Backend schema has been updated. Some features may behave unexpectedly until the UI is rebuilt."
 13. Every schema change (Flyway migration) that affects governance API responses MUST trigger a review of the PROJECT CONTEXT endpoint list and any API type definitions in the UI codebase. Schema drift between backend and frontend is a CDC-readiness violation.
 14. Every spec file modification MUST include a version bump in the file header. After committing spec changes, tag the commit with `git tag spec-v{VERSION}`. The spec integrity gate validates that the in-file version matches the latest git tag.
+15. The apps/desktop/tsconfig.json MUST contain `"ignoreDeprecations": "6.0"` in compilerOptions. This is required because the Windows-side Tauri build uses TypeScript 7.x (global install) while WSL2 uses TypeScript 5.5. The flag is harmless in TS 5.5 but breaks the Windows build without it. Do NOT remove this line.
 
 ---
 
@@ -811,6 +812,7 @@ Document these in a `ROADMAP.md` at the root of `apps/desktop/`:
 - Karpathy Loop / context engineering — explicit context window management UI
 - Agent creation wizard — define new agents from the UI
 - **Web monitoring dashboard** — A read-only web-accessible dashboard (separate from the Tauri desktop app) showing platform health, agent health/execution status, audit stream, and observable system data. Includes a dual-key kill switch requiring two authenticated users to activate (two-person integrity pattern). Rationale: the Tauri desktop app is the full-control cockpit for a single operator; the web dashboard is a control-tower view for team visibility and emergency response. Requires authentication layer (not present in V1) and a pending-kill-request table with expiry logic.
+- **Rule Validity Agent** — An agent that periodically validates all governance rules in CLAUDE.md and UI_CLAUDE.md for continued relevance. Each rule would be stored in a governance_rules database table with metadata: intent (why the rule exists), condition (what must be true for it to apply), expiry_condition (when it should be reviewed/retired), and last_validated_at. The agent tests each rule's underlying condition, checks for inter-rule contradictions, and proposes new rules based on recurring audit log failure patterns. Markdown spec files are auto-generated from the database table as the human-readable view. Rationale: rules written at one point in time may become obsolete, incorrect, or contradictory as the system evolves. Static rules without lifecycle management accumulate technical debt. Research basis: Constitutional AI lifecycle management, policy drift detection in OPA/Rego systems.
 
 ### V3 Features
 - Lower environments — dev/staging/prod environment selector with isolated databases

@@ -1,18 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  /* Dark mode palette */
+  /* Accent colors — shared across themes */
+  --color-accent-blue: #3b82f6;
+  --color-accent-green: #22c55e;
+  --color-accent-amber: #f59e0b;
+  --color-accent-red: #ef4444;
+  --color-accent-purple: #a78bfa;
+
+  /* Dark mode palette (default) */
   --color-bg-primary: #0f1117;
   --color-bg-secondary: #1a1d27;
   --color-bg-elevated: #242736;
   --color-border: rgba(255, 255, 255, 0.08);
   --color-text-primary: #e8eaf0;
   --color-text-secondary: #8b909e;
-  --color-accent-blue: #3b82f6;
-  --color-accent-green: #22c55e;
-  --color-accent-amber: #f59e0b;
-  --color-accent-red: #ef4444;
-  --color-accent-purple: #a78bfa;
 }
 
 :root {
@@ -27,14 +29,18 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Light mode overrides */
-:root.light {
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f5f5f7;
-  --color-bg-elevated: #e8e9ed;
-  --color-border: rgba(0, 0, 0, 0.1);
-  --color-text-primary: #1a1d27;
-  --color-text-secondary: #6b7280;
+/*
+ * Light mode overrides.
+ * Applied when <html class="light"> is set by the theme store.
+ * Uses html.light for higher specificity than @theme defaults.
+ */
+html.light {
+  --color-bg-primary: #ffffff !important;
+  --color-bg-secondary: #f5f5f7 !important;
+  --color-bg-elevated: #e8e9ed !important;
+  --color-border: rgba(0, 0, 0, 0.1) !important;
+  --color-text-primary: #1a1d27 !important;
+  --color-text-secondary: #6b7280 !important;
 }
 
 body {

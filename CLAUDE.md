@@ -1,5 +1,5 @@
 # RECURSIVE SOFTWARE FOUNDRY — CLAUDE CODE MASTER SPECIFICATION
-## Version: 1.1.0 | Environment: Windows 11 + WSL2 | Status: V1 Build
+## Version: 1.3.0 | Environment: Windows 11 + WSL2 | Status: V1 Build
 
 ---
 
@@ -874,6 +874,7 @@ Document these for future phases. Do not implement in V1.
 - **Packet analysis:** Network traffic inspection for agent communication (requires Linux kernel capabilities, design for WSL2 limitations)
 - **Supply chain security:** AI-BOM (AI Bill of Materials) for all generated artifacts, tracking provenance from spec to deployed code
 - **Watermarking:** Cryptographic watermarks in all AI-generated code for provenance verification
+- **Rule Validity Agent:** Periodic validation of all governance rules for continued relevance. Rules stored in database with intent, condition, expiry metadata. Agent tests conditions, detects contradictions, proposes new rules from audit log patterns. Spec files auto-generated from rule table.
 
 ---
 
