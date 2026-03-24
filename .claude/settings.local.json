@@ -89,7 +89,8 @@
       "Bash(chmod +x /home/nicknoel251289/Projects/IDEA_v1/scripts/ui-gate5-phase-validate.sh)",
       "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/ui-gate5-phase-validate.sh UI_PHASE_1_SHELL)",
       "Bash(chmod:*)",
-      "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/spec-integrity-check.sh)"
+      "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/spec-integrity-check.sh)",
+      "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/ui-gate5-phase-validate.sh UI_PHASE_2_GOVERNANCE 2>&1)"
     ]
   }
 }
