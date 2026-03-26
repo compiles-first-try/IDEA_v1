@@ -27,7 +27,7 @@ The Tauri desktop app requires a **two-stage, two-OS build**. These stages CANNO
 | Issue | Status | Workaround |
 |---|---|---|
 | MSI installer fails (WiX lock files) | Open | Use .exe directly, or set CARGO_TARGET_DIR to Windows path |
-| tsconfig.json requires `ignoreDeprecations: "6.0"` | Permanent | Windows has TS 7.x, WSL2 has TS 5.5 — flag bridges both |
+| tsconfig.json requires `ignoreDeprecations: "5.0"` | Permanent | Windows has TS 7.x, WSL2 has TS 5.9 — value `"5.0"` is valid in all versions |
 
 ## Launch After Build
 ```powershell

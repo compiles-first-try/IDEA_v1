@@ -19,7 +19,7 @@
 12. All governance API responses consumed by the UI MUST check for a schema_version field. If schema_version does not match the expected version, show a warning banner: "Backend schema has been updated. Some features may behave unexpectedly until the UI is rebuilt."
 13. Every schema change (Flyway migration) that affects governance API responses MUST trigger a review of the PROJECT CONTEXT endpoint list and any API type definitions in the UI codebase. Schema drift between backend and frontend is a CDC-readiness violation.
 14. Every spec file modification MUST include a version bump in the file header. After committing spec changes, tag the commit with `git tag spec-v{VERSION}`. The spec integrity gate validates that the in-file version matches the latest git tag.
-15. The apps/desktop/tsconfig.json MUST contain `"ignoreDeprecations": "6.0"` in compilerOptions. This is required because the Windows-side Tauri build uses TypeScript 7.x (global install) while WSL2 uses TypeScript 5.5. The flag is harmless in TS 5.5 but breaks the Windows build without it. Do NOT remove this line.
+15. The apps/desktop/tsconfig.json MUST contain `"ignoreDeprecations": "5.0"` in compilerOptions. This bridges TypeScript version differences between Windows (TS 7.x global) and WSL2 (TS 5.9). The value `"5.0"` is valid in all TS versions. Do NOT change this to `"6.0"` (invalid in TS 5.x) or remove this line.
 
 ---
 
