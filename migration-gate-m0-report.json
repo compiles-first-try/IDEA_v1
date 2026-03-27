@@ -1,0 +1,6 @@
+{
+  "gate": "Migration Gate M0 — Preparation",
+  "timestamp": "2026-03-27T11:39:31.000Z",
+  "summary": { "total": 7, "passed": 7, "failed": 0, "warnings": 0 },
+  "results": [{"check": "Workflow structure", "status": "PASS", "detail": "All 16 required files exist"},{"check": "Domain model schema", "status": "PASS", "detail": "Valid JSON schema"},{"check": "MCP servers", "status": "PASS", "detail": "All 6 MCP servers have src/index.ts"},{"check": "Postgres MCP tests", "status": "PASS", "detail": "1 passed"},{"check": "V1 Foundation tests", "status": "PASS", "detail": "10 passed (excluding Ollama timeout-prone tests)"},{"check": "V1 code integrity", "status": "PASS", "detail": "Core V1 exports unchanged"},{"check": "V2 spec", "status": "PASS", "detail": "CLAUDE_V2.md exists (v2.0.0)"}]
+}

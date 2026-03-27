@@ -94,7 +94,16 @@
       "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/ui-gate5-phase-validate.sh UI_PHASE_3_BUILD 2>&1)",
       "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/ui-gate5-phase-validate.sh UI_PHASE_4_AUDIT 2>&1)",
       "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/ui-gate5-phase-validate.sh UI_PHASE_5_KNOWLEDGE_FEEDBACK 2>&1)",
-      "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/ui-gate5-phase-validate.sh UI_PHASE_6_PACKAGING 2>&1)"
+      "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/ui-gate5-phase-validate.sh UI_PHASE_6_PACKAGING 2>&1)",
+      "Bash(for pkg:*)",
+      "Bash(while read:*)",
+      "Bash(do wc:*)",
+      "Bash(find /home/nicknoel251289/Projects/IDEA_v1/apps/desktop/src -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
+      "Bash(find /home/nicknoel251289/Projects/IDEA_v1/packages -name \"*.test.ts\" -type f -exec wc -l {} +)",
+      "WebSearch",
+      "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/migration-gate-m0.sh)",
+      "Bash(ls mcp-servers/*/src/index.ts)",
+      "Bash(bash scripts/rsf-commit.sh \"Phase M0 complete: V2 spec, workflow file-tree structure, 6 MCP server wrappers, migration gate, constitution\" 2>&1)"
     ]
   }
 }

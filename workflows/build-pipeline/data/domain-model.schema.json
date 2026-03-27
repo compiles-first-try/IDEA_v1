@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rsf.local/schemas/generation-target/2.0.0",
+  "title": "GenerationTarget",
+  "description": "Unified domain model for RSF artifact specifications. All agents that produce or consume generation targets validate against this schema.",
+  "type": "object",
+  "required": ["name", "description", "language", "type", "requirements", "schemaVersion"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Short identifier for the artifact (kebab-case or camelCase)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of what this artifact does"
+    },
+    "language": {
+      "enum": ["typescript", "python", "sql", "shell"],
+      "description": "Target programming language"
+    },
+    "type": {
+      "enum": ["function", "class", "module", "api", "test", "config"],
+      "default": "function"
+    },
+    "functionSignature": {
+      "type": "string",
+      "description": "Full function/method signature including types"
+    },
+    "parameters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": { "type": "string" },
+          "type": { "type": "string" },
+          "description": { "type": "string", "default": "" }
+        }
+      }
+    },
+    "returnType": {
+      "type": "string"
+    },
+    "requirements": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "edgeCases": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "testHints": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "schemaVersion": {
+      "type": "string",
+      "const": "2.0.0"
+    }
+  }
+}

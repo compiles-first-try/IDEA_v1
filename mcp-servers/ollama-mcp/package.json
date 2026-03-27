@@ -1,0 +1,26 @@
+{
+  "name": "@rsf/ollama-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MCP server wrapping Ollama API for local LLM inference with token tracking",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@rsf/foundation": "workspace:*",
+    "dotenv": "^16.4.0",
+    "ollama": "^0.5.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.15.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}
