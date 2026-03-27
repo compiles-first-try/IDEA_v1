@@ -1,7 +1,15 @@
+import { readFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Ollama } from "ollama";
 import type { AuditLogger } from "@rsf/foundation";
 import type { DetailedTarget } from "../spec-interpreter/index.js";
 import { validateTypeScript } from "../generator/index.js";
+
+const __prompt_dir = dirname(fileURLToPath(import.meta.url));
+function loadPrompt(relativePath: string): string {
+  return readFileSync(resolve(__prompt_dir, relativePath), "utf-8").replace(/^# System Prompt\n/, "").trim();
+}
 
 export interface TestFirstResult {
   testCode: string;
@@ -20,23 +28,9 @@ export interface TestFirstPipeline {
   run: (target: DetailedTarget) => Promise<TestFirstResult>;
 }
 
-const TEST_GEN_PROMPT = `You are a test generator. Given a function specification, write Vitest test cases.
+const TEST_GEN_PROMPT = loadPrompt("../../../../workflows/build-pipeline/task-3-generate-tests/data/system-prompt.md");
 
-Rules:
-- Output ONLY TypeScript test code, no markdown fences, no explanations
-- Use import { describe, it, expect } from "vitest"
-- Import the function being tested as: import { FUNCTION_NAME } from "./implementation"
-- Cover all requirements and edge cases from the spec
-- Include boundary tests from the test hints
-- Each test should be independent`;
-
-const IMPL_FROM_TESTS_PROMPT = `You are a code generator implementing a function to pass existing tests.
-
-Rules:
-- Output ONLY the TypeScript function implementation
-- No markdown fences, no explanations, no imports, no exports
-- The function must satisfy ALL the test cases provided
-- Match the exact function signature specified`;
+const IMPL_FROM_TESTS_PROMPT = loadPrompt("../../../../workflows/build-pipeline/task-3-generate-tests/data/impl-from-tests-prompt.md");
 
 /**
  * Test-first generation pipeline.

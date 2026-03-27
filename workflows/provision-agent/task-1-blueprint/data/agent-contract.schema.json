@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rsf.local/schemas/agent-contract/2.0.0",
+  "title": "AgentContract",
+  "description": "Behavioral contract for an RSF agent. Defines pre/post conditions, invariants, resource limits, and access controls.",
+  "type": "object",
+  "required": ["agentId"],
+  "properties": {
+    "agentId": { "type": "string", "description": "Unique identifier (kebab-case)" },
+    "preconditions": { "type": "array", "items": { "type": "string" }, "default": [] },
+    "postconditions": { "type": "array", "items": { "type": "string" }, "default": [] },
+    "invariants": { "type": "array", "items": { "type": "string" }, "default": [] },
+    "maxExecutionMs": { "type": "number", "minimum": 1, "default": 60000 },
+    "maxTokensPerCall": { "type": "number", "minimum": 1, "default": 4096 },
+    "allowedTools": { "type": "array", "items": { "type": "string" }, "default": [] },
+    "allowedModels": { "type": "array", "items": { "type": "string" }, "default": ["qwen2.5-coder:14b"] },
+    "requiresApproval": { "type": "boolean", "default": false },
+    "auditLevel": { "enum": ["FULL", "SUMMARY"], "default": "FULL" }
+  }
+}

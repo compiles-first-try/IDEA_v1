@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { Ollama } from "ollama";
 import Anthropic from "@anthropic-ai/sdk";
@@ -5,6 +8,11 @@ import type { AuditLogger } from "@rsf/foundation";
 import type { KillSwitch } from "../kill-switch/index.js";
 import type { ModelRouter, ModelResolution } from "../router/index.js";
 import { defineContract, type AgentContract } from "../contracts/index.js";
+
+const __prompt_dir = dirname(fileURLToPath(import.meta.url));
+function loadPrompt(relativePath: string): string {
+  return readFileSync(resolve(__prompt_dir, relativePath), "utf-8").replace(/^# System Prompt\n/, "").trim();
+}
 
 /** Structured output schema for a generation target */
 export const GenerationTargetSchema = z.object({
@@ -48,20 +56,7 @@ export interface SpecInterpreter {
   interpret: (spec: string) => Promise<GenerationTarget>;
 }
 
-const SYSTEM_PROMPT = `You are a specification interpreter. Given a natural language description of desired software, extract a structured generation target.
-
-Respond with ONLY a valid JSON object matching this schema:
-{
-  "name": "short-name",
-  "description": "what it does",
-  "type": "function" | "class" | "module" | "api" | "test" | "config",
-  "language": "typescript" | "python" | "sql" | "shell",
-  "requirements": ["requirement 1", "requirement 2"],
-  "inputs": ["input 1"],
-  "outputs": ["output 1"]
-}
-
-Do not include any text outside the JSON object.`;
+const SYSTEM_PROMPT = loadPrompt("../../../../workflows/build-pipeline/task-1-interpret-spec/data/system-prompt.md");
 
 async function callOllama(
   model: string,

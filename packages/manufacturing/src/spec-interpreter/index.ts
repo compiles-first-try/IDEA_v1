@@ -1,6 +1,14 @@
+import { readFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { Ollama } from "ollama";
 import type { CacheClient, AuditLogger } from "@rsf/foundation";
+
+const __prompt_dir = dirname(fileURLToPath(import.meta.url));
+function loadPrompt(relativePath: string): string {
+  return readFileSync(resolve(__prompt_dir, relativePath), "utf-8").replace(/^# System Prompt\n/, "").trim();
+}
 
 const ParameterSchema = z.object({
   name: z.string(),
@@ -34,23 +42,7 @@ export interface ManufacturingSpecInterpreter {
   interpret: (spec: string) => Promise<DetailedTarget>;
 }
 
-const SYSTEM_PROMPT = `You are a specification interpreter for a code generation system. Given a description of desired software, produce a detailed generation target.
-
-Respond with ONLY a valid JSON object matching this schema:
-{
-  "name": "functionName",
-  "description": "what it does",
-  "language": "typescript",
-  "type": "function",
-  "functionSignature": "function name(param: type): returnType",
-  "parameters": [{"name": "param", "type": "type", "description": "what it is"}],
-  "returnType": "type",
-  "requirements": ["requirement 1", "requirement 2"],
-  "edgeCases": ["edge case 1"],
-  "testHints": ["name(input) === expectedOutput"]
-}
-
-Be thorough with edge cases and test hints. No text outside the JSON.`;
+const SYSTEM_PROMPT = loadPrompt("../../../../workflows/build-pipeline/task-1-interpret-spec/data/manufacturing-system-prompt.md");
 
 /**
  * Create a manufacturing-layer spec interpreter that produces detailed

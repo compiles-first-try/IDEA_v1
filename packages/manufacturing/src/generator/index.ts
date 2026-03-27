@@ -1,7 +1,15 @@
+import { readFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { Ollama } from "ollama";
 import type { AuditLogger } from "@rsf/foundation";
 import type { DetailedTarget } from "../spec-interpreter/index.js";
+
+const __prompt_dir = dirname(fileURLToPath(import.meta.url));
+function loadPrompt(relativePath: string): string {
+  return readFileSync(resolve(__prompt_dir, relativePath), "utf-8").replace(/^# System Prompt\n/, "").trim();
+}
 
 export interface ValidationResult {
   valid: boolean;
@@ -100,15 +108,7 @@ export function validateTypeScript(code: string): ValidationResult {
   return { valid: errors.length === 0, errors };
 }
 
-const CODE_GEN_PROMPT = `You are a code generator. Given a specification, produce ONLY the TypeScript implementation code.
-
-Rules:
-- Output ONLY valid TypeScript code, no markdown, no explanations
-- Do not include import statements unless necessary
-- Do not include export statements
-- Match the function signature exactly as specified
-- Handle all edge cases listed
-- Code must be syntactically and type-correct`;
+const CODE_GEN_PROMPT = loadPrompt("../../../../workflows/build-pipeline/task-2-generate-code/data/system-prompt.md");
 
 /**
  * Create a code generator that produces TypeScript from DetailedTargets

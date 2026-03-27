@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rsf.local/schemas/detailed-target/2.0.0",
+  "title": "DetailedTarget",
+  "description": "Manufacturing-layer detailed generation target with function signatures, parameters, edge cases, and test hints.",
+  "type": "object",
+  "required": ["name", "description", "language", "functionSignature", "parameters", "returnType", "requirements"],
+  "properties": {
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "language": { "enum": ["typescript", "python", "sql", "shell"] },
+    "type": { "enum": ["function", "class", "module", "api", "test", "config"], "default": "function" },
+    "functionSignature": { "type": "string", "description": "Full function signature with types" },
+    "parameters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": { "type": "string" },
+          "type": { "type": "string" },
+          "description": { "type": "string", "default": "" }
+        }
+      }
+    },
+    "returnType": { "type": "string" },
+    "requirements": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "edgeCases": { "type": "array", "items": { "type": "string" }, "default": [] },
+    "testHints": { "type": "array", "items": { "type": "string" }, "default": [] }
+  }
+}

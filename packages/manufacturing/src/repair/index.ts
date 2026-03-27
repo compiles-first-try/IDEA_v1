@@ -1,6 +1,14 @@
+import { readFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Ollama } from "ollama";
 import type { AuditLogger } from "@rsf/foundation";
 import { validateTypeScript } from "../generator/index.js";
+
+const __prompt_dir = dirname(fileURLToPath(import.meta.url));
+function loadPrompt(relativePath: string): string {
+  return readFileSync(resolve(__prompt_dir, relativePath), "utf-8").replace(/^# System Prompt\n/, "").trim();
+}
 
 export interface RepairRequest {
   code: string;
@@ -26,15 +34,7 @@ export interface RepairAgent {
   repair: (request: RepairRequest) => Promise<RepairResult>;
 }
 
-const REPAIR_PROMPT = `You are an automated program repair agent. Given broken TypeScript code and error information, produce the corrected version.
-
-Rules:
-- Output ONLY the corrected TypeScript function code
-- No markdown fences, no explanations
-- Fix the specific error(s) described
-- Maintain the original function signature
-- Preserve correct parts of the code
-- If the error is logical (wrong output), fix the algorithm`;
+const REPAIR_PROMPT = loadPrompt("../../../../workflows/build-pipeline/task-5-quality-gates/data/repair-prompt.md");
 
 /**
  * Create a program repair agent that takes broken code + errors

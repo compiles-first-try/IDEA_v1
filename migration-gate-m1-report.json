@@ -1,0 +1,6 @@
+{
+  "gate": "Migration Gate M1 — Prompt & Schema Extraction",
+  "timestamp": "2026-03-27T12:59:13.000Z",
+  "summary": { "total": 7, "passed": 7, "failed": 0 },
+  "results": [{"check": "Prompt files", "status": "PASS", "detail": "All 8 prompt files exist and are non-empty"},{"check": "Schema files", "status": "PASS", "detail": "All 3 schema files valid JSON"},{"check": "Prompt extraction", "status": "PASS", "detail": "0 hardcoded prompts, 7 files use loadPrompt()"},{"check": "Foundation tests", "status": "PASS", "detail": "10 passed"},{"check": "Orchestration tests", "status": "PASS", "detail": "4 passed"},{"check": "Manufacturing tests", "status": "PASS", "detail": "4 passed"},{"check": "Provisioning tests", "status": "PASS", "detail": "3 passed"}]
+}

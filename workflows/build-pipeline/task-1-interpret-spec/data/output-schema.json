@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rsf.local/schemas/generation-target-basic/2.0.0",
+  "title": "GenerationTarget (Basic)",
+  "description": "Basic generation target from the orchestration-layer spec interpreter. Used for initial spec parsing before manufacturing enrichment.",
+  "type": "object",
+  "required": ["name", "description", "type", "language", "requirements"],
+  "properties": {
+    "name": { "type": "string", "description": "Short name for the artifact" },
+    "description": { "type": "string", "description": "What this artifact does" },
+    "type": { "enum": ["function", "class", "module", "api", "test", "config"] },
+    "language": { "enum": ["typescript", "python", "sql", "shell"] },
+    "requirements": { "type": "array", "items": { "type": "string" }, "description": "List of functional requirements" },
+    "inputs": { "type": "array", "items": { "type": "string" }, "description": "Expected inputs" },
+    "outputs": { "type": "array", "items": { "type": "string" }, "description": "Expected outputs" }
+  }
+}

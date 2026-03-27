@@ -1,5 +1,13 @@
+import { readFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Ollama } from "ollama";
 import type { AuditLogger } from "@rsf/foundation";
+
+const __prompt_dir = dirname(fileURLToPath(import.meta.url));
+function loadPrompt(relativePath: string): string {
+  return readFileSync(resolve(__prompt_dir, relativePath), "utf-8").replace(/^# System Prompt\n/, "").trim();
+}
 
 export interface ToolSynthResult {
   toolCode: string;
@@ -16,13 +24,7 @@ export interface ToolSynthesizer {
   synthesize: (description: string) => Promise<ToolSynthResult>;
 }
 
-const SYSTEM_PROMPT = `You are a tool synthesizer. Given a tool description, produce three things as a JSON object:
-
-1. "toolCode": A complete TypeScript function implementing the tool. No imports, no exports, just the function.
-2. "zodSchema": A Zod schema string for validating the tool's input, e.g. "z.object({ celsius: z.number() })"
-3. "testCode": Vitest test cases for the tool using describe/it/expect.
-
-Output ONLY valid JSON with these three keys. No markdown.`;
+const SYSTEM_PROMPT = loadPrompt("../../../../workflows/provision-agent/task-2-tool-synth/data/system-prompt.md");
 
 export function createToolSynthesizer(deps: ToolSynthDeps): ToolSynthesizer {
   const { auditLogger, ollamaBaseUrl } = deps;
