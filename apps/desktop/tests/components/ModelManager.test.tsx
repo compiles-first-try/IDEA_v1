@@ -2,8 +2,22 @@
  * ModelManager — Ollama section, Anthropic section, router visualization, V3 placeholder.
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { ModelManager } from "@/components/inference/ModelManager.tsx";
+
+vi.mock("@/api/governance.ts", () => ({
+  governanceApi: {
+    pullModel: vi.fn().mockResolvedValue({ data: {} }),
+    testAnthropic: vi.fn().mockResolvedValue({ data: { success: true } }),
+  },
+}));
+
+function renderWithQuery(ui: ReactNode) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+}
 
 const MOCK_MODELS = {
   ollama: [
@@ -22,26 +36,26 @@ const MOCK_MODELS = {
 
 describe("ModelManager (Phase 2)", () => {
   it("renders Ollama models section", () => {
-    render(<ModelManager data={MOCK_MODELS} />);
+    renderWithQuery(<ModelManager data={MOCK_MODELS} />);
     expect(screen.getAllByText("qwen2.5-coder:14b").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("nomic-embed-text:latest")).toBeInTheDocument();
   });
 
   it("renders pull model input", () => {
-    render(<ModelManager data={MOCK_MODELS} />);
+    renderWithQuery(<ModelManager data={MOCK_MODELS} />);
     expect(screen.getByPlaceholderText(/model name/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /pull/i })).toBeInTheDocument();
   });
 
   it("renders Anthropic key status (never the key itself)", () => {
-    render(<ModelManager data={MOCK_MODELS} />);
+    renderWithQuery(<ModelManager data={MOCK_MODELS} />);
     expect(screen.getByText(/API Key:/i)).toBeInTheDocument();
     expect(screen.getByText("Set")).toBeInTheDocument();
     expect(screen.queryByText(/sk-ant/)).not.toBeInTheDocument();
   });
 
   it("renders 4 model router tiers", () => {
-    render(<ModelManager data={MOCK_MODELS} />);
+    renderWithQuery(<ModelManager data={MOCK_MODELS} />);
     expect(screen.getByText("TRIVIAL")).toBeInTheDocument();
     expect(screen.getByText("STANDARD")).toBeInTheDocument();
     expect(screen.getByText("COMPLEX")).toBeInTheDocument();
@@ -49,12 +63,12 @@ describe("ModelManager (Phase 2)", () => {
   });
 
   it("shows V3 placeholder for fine-tuning", () => {
-    render(<ModelManager data={MOCK_MODELS} />);
+    renderWithQuery(<ModelManager data={MOCK_MODELS} />);
     expect(screen.getByText(/coming in v3/i)).toBeInTheDocument();
   });
 
   it("renders test connection button for Anthropic", () => {
-    render(<ModelManager data={MOCK_MODELS} />);
+    renderWithQuery(<ModelManager data={MOCK_MODELS} />);
     expect(screen.getByRole("button", { name: /test connection/i })).toBeInTheDocument();
   });
 });

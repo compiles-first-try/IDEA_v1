@@ -1,13 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
-import { governanceApi } from "@/api/governance.ts";
+import { useFoundryStatus } from "@/hooks/useFoundryStatus.ts";
 import { KillSwitch } from "@/components/governance/KillSwitch.tsx";
 
 export function TopBar() {
-  const { data: status } = useQuery({
-    queryKey: ["governance-status"],
-    queryFn: () => governanceApi.getStatus().then((r) => r.data),
-    refetchInterval: 5_000,
-  });
+  const { data: status } = useFoundryStatus();
 
   const isRunning = status && !status.killSwitchActive;
   const spend = status?.dailySpend ?? 0;

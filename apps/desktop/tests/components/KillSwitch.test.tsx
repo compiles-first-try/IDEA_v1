@@ -7,6 +7,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { KillSwitch } from "@/components/governance/KillSwitch.tsx";
 
 // Mock the governance API
@@ -18,18 +20,23 @@ vi.mock("@/api/governance.ts", () => ({
 
 import { governanceApi } from "@/api/governance.ts";
 
+function renderWithQuery(ui: ReactNode) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+}
+
 describe("Contract 1: KillSwitch", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("renders a stop button", () => {
-    render(<KillSwitch />);
+    renderWithQuery(<KillSwitch />);
     expect(screen.getByRole("button", { name: /stop/i })).toBeInTheDocument();
   });
 
   it("shows confirmation dialog on click", async () => {
-    render(<KillSwitch />);
+    renderWithQuery(<KillSwitch />);
     fireEvent.click(screen.getByRole("button", { name: /stop/i }));
     expect(
       await screen.findByText(/stop all agent activity/i)
@@ -40,7 +47,7 @@ describe("Contract 1: KillSwitch", () => {
   });
 
   it("calls POST /governance/stop on confirm", async () => {
-    render(<KillSwitch />);
+    renderWithQuery(<KillSwitch />);
     fireEvent.click(screen.getByRole("button", { name: /stop/i }));
     fireEvent.click(
       await screen.findByRole("button", { name: /stop everything/i })
@@ -51,7 +58,7 @@ describe("Contract 1: KillSwitch", () => {
   });
 
   it("does not call API on cancel", async () => {
-    render(<KillSwitch />);
+    renderWithQuery(<KillSwitch />);
     fireEvent.click(screen.getByRole("button", { name: /stop/i }));
     fireEvent.click(await screen.findByRole("button", { name: /cancel/i }));
     expect(governanceApi.stop).not.toHaveBeenCalled();

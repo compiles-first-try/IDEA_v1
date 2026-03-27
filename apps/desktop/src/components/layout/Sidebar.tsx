@@ -5,17 +5,18 @@ interface NavItem {
   route: NavRoute;
   label: string;
   icon: string;
+  hint: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { route: "build", label: "Build", icon: "⚙" },
-  { route: "audit", label: "Audit", icon: "📋" },
-  { route: "agents", label: "Agents", icon: "🤖" },
-  { route: "models", label: "Models", icon: "🧠" },
-  { route: "improve", label: "Improve", icon: "📈" },
-  { route: "docs", label: "Docs", icon: "📄" },
-  { route: "config", label: "Config", icon: "⚡" },
-  { route: "feedback", label: "Feedback", icon: "💬" },
+  { route: "build", label: "Build", icon: "\u2699", hint: "Submit specs, generate code" },
+  { route: "audit", label: "Audit", icon: "\ud83d\udccb", hint: "View all agent activity" },
+  { route: "agents", label: "Agents", icon: "\ud83e\udd16", hint: "Manage agent roster" },
+  { route: "models", label: "Models", icon: "\ud83e\udde0", hint: "LLMs and routing tiers" },
+  { route: "improve", label: "Improve", icon: "\ud83d\udcc8", hint: "Run self-improvement cycles" },
+  { route: "docs", label: "Docs", icon: "\ud83d\udcc4", hint: "Ingest knowledge for agents" },
+  { route: "config", label: "Config", icon: "\u26a1", hint: "Spend limits and rules" },
+  { route: "feedback", label: "Feedback", icon: "\ud83d\udcac", hint: "Rate generated artifacts" },
 ];
 
 export function Sidebar() {
@@ -34,6 +35,7 @@ export function Sidebar() {
           <button
             key={item.route}
             onClick={() => setActiveRoute(item.route)}
+            title={item.hint}
             className={`flex items-center gap-3 rounded px-3 py-2 text-left text-sm transition-colors ${
               activeRoute === item.route
                 ? "bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] font-medium"

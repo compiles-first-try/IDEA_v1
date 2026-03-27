@@ -1,17 +1,16 @@
 import { useState } from "react";
-import { governanceApi } from "@/api/governance.ts";
+import { useKillSwitch } from "@/hooks/useKillSwitch.ts";
 
 export function KillSwitch() {
   const [showConfirm, setShowConfirm] = useState(false);
-  const [disabled, setDisabled] = useState(false);
+  const killSwitch = useKillSwitch();
 
   const handleConfirm = async () => {
-    setDisabled(true);
     setShowConfirm(false);
     try {
-      await governanceApi.stop();
-    } finally {
-      setTimeout(() => setDisabled(false), 3000);
+      await killSwitch.activate();
+    } catch {
+      // error state available via killSwitch.isError
     }
   };
 
@@ -19,11 +18,11 @@ export function KillSwitch() {
     <>
       <button
         onClick={() => setShowConfirm(true)}
-        disabled={disabled}
+        disabled={killSwitch.isPending}
         className="rounded bg-[var(--color-accent-red)] px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
         aria-label="Stop"
       >
-        ■ STOP
+        {killSwitch.isPending ? "Stopping..." : "\u25a0 STOP"}
       </button>
 
       {showConfirm && (
