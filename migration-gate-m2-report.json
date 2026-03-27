@@ -1,0 +1,6 @@
+{
+  "gate": "Migration Gate M2 — New Capabilities",
+  "timestamp": "2026-03-27T14:17:26.000Z",
+  "summary": { "total": 6, "passed": 6, "failed": 0, "warnings": 0 },
+  "results": [{"check": "V2 capabilities tests", "status": "PASS", "detail": "5 passed"},{"check": "V2 modules", "status": "PASS", "detail": "All 5 capability modules exist"},{"check": "V1 Foundation", "status": "PASS", "detail": "10 passed"},{"check": "V1 Orchestration", "status": "PASS", "detail": "4 passed"},{"check": "V1 code integrity", "status": "PASS", "detail": "Core V1 exports unchanged"},{"check": "V2 TypeScript", "status": "PASS", "detail": "Zero errors"}]
+}

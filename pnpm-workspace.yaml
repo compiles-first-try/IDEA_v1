@@ -13,3 +13,4 @@ packages:
   - "mcp-servers/ollama-mcp"
   - "mcp-servers/anthropic-mcp"
   - "mcp-servers/audit-mcp"
+  - "packages/v2-capabilities"

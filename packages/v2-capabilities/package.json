@@ -1,0 +1,30 @@
+{
+  "name": "@rsf/v2-capabilities",
+  "version": "2.0.0",
+  "private": true,
+  "description": "V2 new capabilities: environment scanning, knowledge bus, epistemic tracking, test validation, adversarial review",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rsf/foundation": "workspace:*",
+    "@rsf/orchestration": "workspace:*",
+    "@anthropic-ai/sdk": "^0.80.0",
+    "dotenv": "^16.4.0",
+    "ollama": "^0.6.3",
+    "pg": "^8.12.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}
