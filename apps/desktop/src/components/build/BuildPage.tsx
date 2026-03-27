@@ -9,9 +9,11 @@ import type { ReasoningMode } from "@/store/session.ts";
 export function BuildPage() {
   const { busy, stages, artifacts } = useSessionStore();
   const build = useBuild();
-  const [leftPct, setLeftPct] = useState(40);
+  const [topPct, setTopPct] = useState(40);
   const dragging = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const hasActivity = busy || stages.some((s) => s.status !== "pending") || artifacts !== null;
 
   const handleSubmit = async (spec: string, mode: ReasoningMode) => {
     try {
@@ -23,14 +25,14 @@ export function BuildPage() {
 
   const onMouseDown = useCallback(() => {
     dragging.current = true;
-    document.body.style.cursor = "col-resize";
+    document.body.style.cursor = "row-resize";
     document.body.style.userSelect = "none";
 
     const onMouseMove = (e: MouseEvent) => {
       if (!dragging.current || !containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
-      const pct = ((e.clientX - rect.left) / rect.width) * 100;
-      setLeftPct(Math.max(20, Math.min(70, pct)));
+      const pct = ((e.clientY - rect.top) / rect.height) * 100;
+      setTopPct(Math.max(20, Math.min(70, pct)));
     };
 
     const onMouseUp = () => {
@@ -46,9 +48,9 @@ export function BuildPage() {
   }, []);
 
   return (
-    <div ref={containerRef} className="flex h-full">
-      {/* Left panel — spec input */}
-      <div data-testid="build-left" className="flex flex-col" style={{ width: `${leftPct}%` }}>
+    <div ref={containerRef} className="flex h-full flex-col">
+      {/* Top: Spec input — full width, primary interface */}
+      <div data-testid="build-left" className="flex flex-col" style={{ height: hasActivity ? `${topPct}%` : "100%" }}>
         <SpecInputFull onSubmit={handleSubmit} busy={busy} />
         {build.isError && (
           <p className="mt-2 text-xs text-[var(--color-accent-red)]">
@@ -57,22 +59,28 @@ export function BuildPage() {
         )}
       </div>
 
-      {/* Draggable divider */}
-      <div
-        onMouseDown={onMouseDown}
-        className="flex w-2 shrink-0 cursor-col-resize items-center justify-center hover:bg-[var(--color-accent-blue)]/20"
-        title="Drag to resize"
-      >
-        <div className="h-8 w-0.5 rounded bg-[var(--color-border)]" />
-      </div>
+      {/* Draggable horizontal divider — only shown when pipeline has activity */}
+      {hasActivity && (
+        <>
+          <div
+            onMouseDown={onMouseDown}
+            className="flex h-2 shrink-0 cursor-row-resize items-center justify-center hover:bg-[var(--color-accent-blue)]/20"
+            title="Drag to resize"
+          >
+            <div className="h-0.5 w-8 rounded bg-[var(--color-border)]" />
+          </div>
 
-      {/* Right panel — pipeline + artifacts */}
-      <div data-testid="build-right" className="flex flex-1 flex-col gap-4">
-        <PipelineView stages={stages} />
-        <div className="flex-1 min-h-0">
-          <ArtifactView artifacts={artifacts} />
-        </div>
-      </div>
+          {/* Bottom: Pipeline flow + Artifacts — side by side */}
+          <div data-testid="build-right" className="flex flex-1 gap-4 min-h-0 overflow-auto">
+            <div className="w-[340px] shrink-0 overflow-y-auto">
+              <PipelineView stages={stages} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <ArtifactView artifacts={artifacts} />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

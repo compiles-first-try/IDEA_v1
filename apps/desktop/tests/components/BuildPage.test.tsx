@@ -1,5 +1,5 @@
 /**
- * BuildPage — wires SpecInput (40%) + PipelineView + ArtifactView (60%).
+ * BuildPage — full-width spec input, pipeline + artifacts shown after submit.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -27,25 +27,31 @@ function renderWithQuery(ui: ReactNode) {
   return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
 
-describe("BuildPage (Phase 3)", () => {
+describe("BuildPage", () => {
   beforeEach(() => {
     useSessionStore.getState().reset();
   });
 
-  it("renders spec input panel and pipeline panel", () => {
+  it("renders spec input as the primary interface", () => {
     renderWithQuery(<BuildPage />);
     expect(screen.getByRole("textbox")).toBeInTheDocument();
-    expect(screen.getByText("Spec Interpreter")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /build/i })).toBeInTheDocument();
   });
 
-  it("shows no artifacts message initially", () => {
-    renderWithQuery(<BuildPage />);
-    expect(screen.getByText(/no artifacts/i)).toBeInTheDocument();
-  });
-
-  it("renders 40/60 split layout", () => {
+  it("hides pipeline when no build activity", () => {
     const { container } = renderWithQuery(<BuildPage />);
-    const panels = container.querySelectorAll("[data-testid='build-left'], [data-testid='build-right']");
-    expect(panels).toHaveLength(2);
+    expect(container.querySelector("[data-testid='build-right']")).not.toBeInTheDocument();
+  });
+
+  it("shows pipeline when build is active", () => {
+    useSessionStore.setState({
+      busy: true,
+      stages: useSessionStore.getState().stages.map((s, i) =>
+        i === 0 ? { ...s, status: "running" as const } : s
+      ),
+    });
+    const { container } = renderWithQuery(<BuildPage />);
+    expect(container.querySelector("[data-testid='build-right']")).toBeInTheDocument();
+    expect(screen.getByText("Spec Interpreter")).toBeInTheDocument();
   });
 });
