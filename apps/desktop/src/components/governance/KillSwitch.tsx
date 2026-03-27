@@ -1,18 +1,42 @@
 import { useState } from "react";
 import { useKillSwitch } from "@/hooks/useKillSwitch.ts";
+import { useFoundryStatus } from "@/hooks/useFoundryStatus.ts";
 
 export function KillSwitch() {
   const [showConfirm, setShowConfirm] = useState(false);
   const killSwitch = useKillSwitch();
+  const { data: status } = useFoundryStatus();
+  const isStopped = status?.killSwitchActive === true;
 
-  const handleConfirm = async () => {
+  const handleStop = async () => {
     setShowConfirm(false);
     try {
       await killSwitch.activate();
     } catch {
-      // error state available via killSwitch.isError
+      // error visible via killSwitch.isError
     }
   };
+
+  const handleResume = async () => {
+    try {
+      await killSwitch.resume();
+    } catch {
+      // error visible via killSwitch.isError
+    }
+  };
+
+  if (isStopped) {
+    return (
+      <button
+        onClick={handleResume}
+        disabled={killSwitch.isResuming}
+        className="rounded bg-[var(--color-accent-green)] px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+        aria-label="Resume"
+      >
+        {killSwitch.isResuming ? "Resuming..." : "Resume"}
+      </button>
+    );
+  }
 
   return (
     <>
@@ -35,7 +59,7 @@ export function KillSwitch() {
               Stop all agent activity immediately?
             </h2>
             <p className="mb-6 text-sm text-[var(--color-text-secondary)]">
-              This cannot be undone.
+              All running pipelines will halt. You can resume from the same button.
             </p>
             <div className="flex justify-end gap-3">
               <button
@@ -45,7 +69,7 @@ export function KillSwitch() {
                 Cancel
               </button>
               <button
-                onClick={handleConfirm}
+                onClick={handleStop}
                 className="rounded bg-[var(--color-accent-red)] px-4 py-2 text-sm font-semibold text-white"
               >
                 Stop Everything

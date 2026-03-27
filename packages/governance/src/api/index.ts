@@ -1,5 +1,6 @@
 import express, { type Request, type Response } from "express";
 import helmet from "helmet";
+import cors from "cors";
 import { z } from "zod";
 import type { CacheClient, DbClient, AuditLogger } from "@rsf/foundation";
 
@@ -48,7 +49,8 @@ export function createGovernanceApi(deps: GovernanceApiDeps): express.Express {
   const { cache, db, auditLogger, v2Pipeline } = deps;
   const app = express();
 
-  app.use(helmet());
+  app.use(helmet({ crossOriginResourcePolicy: false }));
+  app.use(cors({ origin: true, credentials: true }));
   app.use(express.json());
 
   // Inject schema_version into every JSON response
@@ -84,6 +86,25 @@ export function createGovernanceApi(deps: GovernanceApiDeps): express.Express {
       res.json({ killed: true, timestamp: new Date().toISOString() });
     } catch {
       res.status(500).json({ error: "Failed to activate kill switch" });
+    }
+  });
+
+  // ── POST /governance/resume ──
+  app.post("/governance/resume", async (_req: Request, res: Response) => {
+    try {
+      await cache.del(KILL_KEY);
+      await auditLogger.log({
+        agentId: "kill-switch",
+        agentType: "GOVERNANCE",
+        actionType: "KILL_SWITCH_CLEARED",
+        phase: "GOVERNANCE",
+        inputs: { triggered_by: "http-api", mechanism: "HTTP" },
+        status: "SUCCESS",
+        durationMs: 0,
+      });
+      res.json({ resumed: true, timestamp: new Date().toISOString() });
+    } catch {
+      res.status(500).json({ error: "Failed to resume" });
     }
   });
 

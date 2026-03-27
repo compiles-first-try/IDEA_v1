@@ -17,7 +17,7 @@ describe("Sidebar", () => {
 
   it("renders all 8 navigation items", () => {
     render(<Sidebar />);
-    for (const label of ["Build", "Audit", "Agents", "Models", "Improve", "Docs", "Config", "Feedback"]) {
+    for (const label of ["Build", "Audit", "Agents", "Models", "Improve", "Knowledge", "Config", "Feedback"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
   });

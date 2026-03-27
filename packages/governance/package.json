@@ -17,6 +17,8 @@
     "@rsf/foundation": "workspace:*",
     "@rsf/orchestration": "workspace:*",
     "@rsf/v2-pipeline": "workspace:*",
+    "@types/cors": "^2.8.19",
+    "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^4.21.0",
     "helmet": "^8.0.0",

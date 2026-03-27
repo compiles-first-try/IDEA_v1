@@ -190,6 +190,7 @@ export const governanceApi = {
     return apiClient.get<AuditResponse>(`/governance/audit${qs ? `?${qs}` : ""}`);
   },
   stop: () => apiClient.post("/governance/stop"),
+  resume: () => apiClient.post("/governance/resume"),
   getConfig: () => apiClient.get<ConfigResponse>("/governance/config"),
   patchConfig: (data: Partial<ConfigResponse>) =>
     apiClient.patch<ConfigResponse>("/governance/config", data),

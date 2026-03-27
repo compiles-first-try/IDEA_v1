@@ -14,7 +14,7 @@ const NAV_ITEMS: NavItem[] = [
   { route: "agents", label: "Agents", icon: "\ud83e\udd16", hint: "Manage agent roster" },
   { route: "models", label: "Models", icon: "\ud83e\udde0", hint: "LLMs and routing tiers" },
   { route: "improve", label: "Improve", icon: "\ud83d\udcc8", hint: "Run self-improvement cycles" },
-  { route: "docs", label: "Docs", icon: "\ud83d\udcc4", hint: "Ingest knowledge for agents" },
+  { route: "docs", label: "Knowledge", icon: "\ud83d\udcc4", hint: "Ingest knowledge for agents" },
   { route: "config", label: "Config", icon: "\u26a1", hint: "Spend limits and rules" },
   { route: "feedback", label: "Feedback", icon: "\ud83d\udcac", hint: "Rate generated artifacts" },
 ];

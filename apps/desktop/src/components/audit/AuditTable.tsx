@@ -45,10 +45,11 @@ export function AuditTable({ events, total, page, onPageChange, onFilterChange }
   };
 
   const exportCsv = () => {
-    const header = "timestamp,agent,action,model,tokens_in,tokens_out,duration_ms,status\n";
-    const rows = events.map((e) =>
-      `${e.timestamp},${e.agent_id},${e.action_type},${e.model_used ?? ""},${e.tokens_in ?? ""},${e.tokens_out ?? ""},${e.duration_ms ?? ""},${e.status}`
-    ).join("\n");
+    const header = "timestamp,agent,action,model,tokens_in,tokens_out,duration_ms,status,error_message\n";
+    const rows = events.map((e) => {
+      const err = (e.error_message ?? "").replace(/"/g, '""');
+      return `${e.timestamp},${e.agent_id},${e.action_type},${e.model_used ?? ""},${e.tokens_in ?? ""},${e.tokens_out ?? ""},${e.duration_ms ?? ""},${e.status},"${err}"`;
+    }).join("\n");
     const blob = new Blob([header + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -90,6 +91,7 @@ export function AuditTable({ events, total, page, onPageChange, onFilterChange }
               <th className="p-2 text-right">Tokens</th>
               <th className="p-2 text-right">Duration</th>
               <th className="p-2">Status</th>
+              <th className="p-2">Error</th>
             </tr>
           </thead>
           <tbody>
@@ -104,10 +106,11 @@ export function AuditTable({ events, total, page, onPageChange, onFilterChange }
                   <td className="p-2 text-right">{e.tokens_in ?? "—"}/{e.tokens_out ?? "—"}</td>
                   <td className="p-2 text-right">{e.duration_ms != null ? `${e.duration_ms}ms` : "—"}</td>
                   <td className={`p-2 ${e.status === "SUCCESS" ? "text-[var(--color-accent-green)]" : e.status === "FAILURE" ? "text-[var(--color-accent-red)]" : ""}`}>{e.status}</td>
+                  <td className="p-2 text-[var(--color-accent-red)]">{e.error_message ?? ""}</td>
                 </tr>
                 {expandedId === e.event_id && (
                   <tr key={`${e.event_id}-detail`}>
-                    <td colSpan={7} className="bg-[var(--color-bg-secondary)] p-3">
+                    <td colSpan={8} className="bg-[var(--color-bg-secondary)] p-3">
                       <div data-testid={`event-detail-${e.event_id}`} className="space-y-2 text-[10px]">
                         {e.inputs && <div><span className="font-semibold">Inputs:</span> <pre className="mt-1 whitespace-pre-wrap">{JSON.stringify(e.inputs, null, 2)}</pre></div>}
                         {e.outputs && <div><span className="font-semibold">Outputs:</span> <pre className="mt-1 whitespace-pre-wrap">{JSON.stringify(e.outputs, null, 2)}</pre></div>}

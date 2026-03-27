@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs";
-import { resolve, dirname } from "node:path";
+import { readFileSync, accessSync } from "node:fs";
+import { resolve, dirname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { Ollama } from "ollama";
@@ -46,17 +46,13 @@ export function validateTypeScript(code: string): ValidationResult {
   const defaultLibPath = ts.getDefaultLibFilePath({
     target: ts.ScriptTarget.ES2022,
   });
-  const libDir = require("node:path").dirname(defaultLibPath);
+  const libDir = dirname(defaultLibPath);
 
   const compilerHost: ts.CompilerHost = {
     getSourceFile: (name, target) => {
       if (name === filename) return sourceFile;
-      // Load lib files from TypeScript installation
       try {
-        const libContent = require("node:fs").readFileSync(
-          require("node:path").resolve(libDir, require("node:path").basename(name)),
-          "utf-8"
-        );
+        const libContent = readFileSync(resolve(libDir, basename(name)), "utf-8");
         return ts.createSourceFile(name, libContent, target ?? ts.ScriptTarget.ES2022, true);
       } catch {
         return undefined;
@@ -70,14 +66,11 @@ export function validateTypeScript(code: string): ValidationResult {
     getNewLine: () => "\n",
     fileExists: (name) =>
       name === filename ||
-      (() => { try { require("node:fs").accessSync(require("node:path").resolve(libDir, require("node:path").basename(name))); return true; } catch { return false; } })(),
+      (() => { try { accessSync(resolve(libDir, basename(name))); return true; } catch { return false; } })(),
     readFile: (name) => {
       if (name === filename) return code;
       try {
-        return require("node:fs").readFileSync(
-          require("node:path").resolve(libDir, require("node:path").basename(name)),
-          "utf-8"
-        );
+        return readFileSync(resolve(libDir, basename(name)), "utf-8");
       } catch { return undefined; }
     },
   };

@@ -4,15 +4,24 @@ import { governanceApi } from "@/api/governance.ts";
 export function useKillSwitch() {
   const queryClient = useQueryClient();
 
-  const mutation = useMutation({
+  const stopMutation = useMutation({
     mutationFn: () => governanceApi.stop(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["governance-status"] });
     },
   });
 
+  const resumeMutation = useMutation({
+    mutationFn: () => governanceApi.resume(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["governance-status"] });
+    },
+  });
+
   return {
-    ...mutation,
-    activate: () => mutation.mutateAsync(),
+    ...stopMutation,
+    activate: () => stopMutation.mutateAsync(),
+    resume: () => resumeMutation.mutateAsync(),
+    isResuming: resumeMutation.isPending,
   };
 }
