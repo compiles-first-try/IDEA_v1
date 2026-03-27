@@ -14,3 +14,4 @@ packages:
   - "mcp-servers/anthropic-mcp"
   - "mcp-servers/audit-mcp"
   - "packages/v2-capabilities"
+  - "packages/v2-safety"

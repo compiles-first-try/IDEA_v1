@@ -110,7 +110,9 @@
       "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/migration-gate-m1.sh)",
       "Bash(bash scripts/rsf-commit.sh \"Phase M1 complete: extract 8 prompts to workflow files, 3 JSON schemas, 7 V1 source files updated to loadPrompt\\(\\), migration gate M1 passes\" 2>&1)",
       "Bash(ls packages/v2-capabilities/src/*/index.ts)",
-      "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/migration-gate-m2.sh 2>&1)"
+      "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/migration-gate-m2.sh 2>&1)",
+      "Bash(ls packages/v2-safety/src/*/index.ts)",
+      "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/migration-gate-m3.sh 2>&1)"
     ]
   }
 }

@@ -1,0 +1,25 @@
+{
+  "name": "@rsf/v2-safety",
+  "version": "2.0.0",
+  "private": true,
+  "description": "V2 safety hardening: AgentSpec enforcement, crypto audit, cross-agent monitoring, drift detection, OWASP checklist",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rsf/foundation": "workspace:*",
+    "@rsf/orchestration": "workspace:*",
+    "dotenv": "^16.4.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}
