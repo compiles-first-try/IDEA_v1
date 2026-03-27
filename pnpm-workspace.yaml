@@ -16,3 +16,4 @@ packages:
   - "mcp-servers/semantic-cache-mcp"
   - "packages/v2-capabilities"
   - "packages/v2-safety"
+  - "packages/v2-pipeline"

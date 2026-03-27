@@ -1,0 +1,26 @@
+{
+  "name": "@rsf/v2-pipeline",
+  "version": "2.0.0",
+  "private": true,
+  "description": "V2 end-to-end pipeline orchestrator — wires all V1 operational code with V2 capabilities, safety, and routing",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rsf/foundation": "workspace:*",
+    "@rsf/orchestration": "workspace:*",
+    "@rsf/manufacturing": "workspace:*",
+    "@rsf/v2-capabilities": "workspace:*",
+    "@rsf/v2-safety": "workspace:*",
+    "dotenv": "^16.4.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}
