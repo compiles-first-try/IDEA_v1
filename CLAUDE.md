@@ -464,7 +464,14 @@ CREATE TABLE agent_events (
     workload_id     VARCHAR(255),          -- logical task type for fine-tuning isolation
     reasoning_trace TEXT,                   -- chain-of-thought storage for training signal
     context_utilization_pct FLOAT,          -- tokens_in / model_context_limit
-    router_classification_reason TEXT       -- why the router chose that tier
+    router_classification_reason TEXT,      -- why the router chose that tier
+
+    -- V4: Pareto tracking columns (V4__pareto_tracking_columns.sql)
+    task_tier               SMALLINT,          -- 1, 2, or 3
+    task_cost_usd           FLOAT,             -- actual cost of this execution
+    task_quality_score      FLOAT,             -- quality gate score (0-1)
+    cache_hit               BOOLEAN DEFAULT FALSE, -- was this served from cache?
+    escalated_from_tier     SMALLINT           -- NULL if first attempt, else prior tier
 );
 
 -- Vector memory for semantic search
@@ -529,6 +536,7 @@ CREATE INDEX ON memory_entries USING ivfflat (embedding vector_cosine_ops)
 CREATE INDEX ON artifacts (artifact_type, created_at);
 CREATE INDEX ON agent_blueprints (generation, benchmark_score);
 CREATE INDEX ON agent_events (workload_id);
+CREATE INDEX ON agent_events (task_tier, task_cost_usd, task_quality_score);
 ```
 
 ---
@@ -588,7 +596,12 @@ Every entry in `audit.jsonl` and `agent_events` table must include:
   "workload_id": "spec-interpret-compound-interest",
   "reasoning_trace": "Task requires financial math → classify as STANDARD → route to qwen2.5-coder:14b",
   "context_utilization_pct": 0.42,
-  "router_classification_reason": "Single-function generation with domain math — STANDARD tier sufficient"
+  "router_classification_reason": "Single-function generation with domain math — STANDARD tier sufficient",
+  "task_tier": 2,
+  "task_cost_usd": 0.004,
+  "task_quality_score": 0.92,
+  "cache_hit": false,
+  "escalated_from_tier": null
 }
 ```
 

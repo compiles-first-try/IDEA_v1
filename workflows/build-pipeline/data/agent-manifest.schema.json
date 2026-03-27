@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rsf.local/schemas/agent-manifest/1.0.0",
+  "title": "Agent Manifest",
+  "description": "Structured metadata for routing decisions. Every agent in workflows/ must include an agent-manifest.json conforming to this schema.",
+  "type": "object",
+  "required": ["agent_id", "display_name", "tier", "capabilities", "cost_profile"],
+  "properties": {
+    "agent_id": {
+      "type": "string",
+      "description": "Unique identifier matching the workflow directory name"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Human-readable name shown in UI"
+    },
+    "tier": {
+      "enum": [1, 2, 3],
+      "description": "Default operating tier (1=reactive, 2=coordinated, 3=strategic)"
+    },
+    "capabilities": {
+      "type": "object",
+      "properties": {
+        "generalist": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Broad task categories this agent handles adequately"
+        },
+        "specialist": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Specific sub-domains where this agent excels"
+        }
+      }
+    },
+    "models": {
+      "type": "object",
+      "properties": {
+        "primary": { "type": "string", "description": "Default model for this agent" },
+        "fallback": { "type": "string", "description": "Cheaper model for simple tasks" },
+        "escalation": { "type": "string", "description": "More capable model for hard tasks" }
+      }
+    },
+    "cost_profile": {
+      "type": "object",
+      "properties": {
+        "avg_tokens_per_task": { "type": "number" },
+        "avg_latency_ms": { "type": "number" },
+        "avg_cost_usd": { "type": "number" }
+      }
+    },
+    "confidence_calibration": {
+      "type": "object",
+      "properties": {
+        "historical_accuracy_at_confidence": {
+          "type": "object",
+          "description": "Map of confidence bucket to actual accuracy",
+          "additionalProperties": { "type": "number" }
+        },
+        "last_calibrated": { "type": "string", "format": "date-time" }
+      }
+    },
+    "escalation_targets": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Agent IDs this agent escalates to when confidence is low"
+    },
+    "input_schema": { "type": "string", "description": "Path to JSON schema for expected input" },
+    "output_schema": { "type": "string", "description": "Path to JSON schema for guaranteed output" }
+  }
+}

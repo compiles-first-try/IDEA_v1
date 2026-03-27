@@ -1,0 +1,31 @@
+{
+  "agent_id": "task-2-generate-code",
+  "display_name": "Code Generator",
+  "tier": 2,
+  "capabilities": {
+    "generalist": ["typescript-function", "python-function", "sql-query", "shell-script"],
+    "specialist": ["typescript-module", "express-api", "zod-schema", "prisma-model"]
+  },
+  "models": {
+    "primary": "qwen2.5-coder:14b",
+    "fallback": "qwen2.5-coder:7b",
+    "escalation": "claude-sonnet-4-6-20250514"
+  },
+  "cost_profile": {
+    "avg_tokens_per_task": 2400,
+    "avg_latency_ms": 3200,
+    "avg_cost_usd": 0.004
+  },
+  "confidence_calibration": {
+    "historical_accuracy_at_confidence": {
+      "0.9-1.0": 0.94,
+      "0.8-0.9": 0.82,
+      "0.7-0.8": 0.68,
+      "0.0-0.7": 0.41
+    },
+    "last_calibrated": "2026-03-27T00:00:00Z"
+  },
+  "escalation_targets": ["task-2-generate-code-complex"],
+  "input_schema": "data/detailed-target.schema.json",
+  "output_schema": "data/code-artifact.schema.json"
+}

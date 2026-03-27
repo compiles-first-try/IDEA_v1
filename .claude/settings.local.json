@@ -112,7 +112,9 @@
       "Bash(ls packages/v2-capabilities/src/*/index.ts)",
       "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/migration-gate-m2.sh 2>&1)",
       "Bash(ls packages/v2-safety/src/*/index.ts)",
-      "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/migration-gate-m3.sh 2>&1)"
+      "Bash(bash /home/nicknoel251289/Projects/IDEA_v1/scripts/migration-gate-m3.sh 2>&1)",
+      "Bash(npx vitest:*)",
+      "Bash(ls:*)"
     ]
   }
 }
