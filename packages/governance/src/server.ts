@@ -61,6 +61,7 @@ async function main() {
     httpServer,
     postgresUrl: process.env.POSTGRES_URL!,
     cache,
+    db,
   });
 
   httpServer.listen(PORT, () => {

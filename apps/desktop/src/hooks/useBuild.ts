@@ -24,7 +24,9 @@ export function useBuild() {
         if (msg.type !== "audit_event" || !msg.data) return;
 
         const event = msg.data;
-        if (event.session_id !== buildIdRef.current) return;
+        // Kill switch events are global — don't filter by session_id
+        const isGlobalEvent = event.action_type === "KILL_SWITCH_ACTIVATED";
+        if (!isGlobalEvent && event.session_id !== buildIdRef.current) return;
 
         const stageId = event.inputs?.stageId as string | undefined;
 
@@ -63,6 +65,11 @@ export function useBuild() {
             auditTrail: [],
           };
           completeBuild(artifacts);
+        }
+
+        // Kill switch activated — reset build state so UI is usable again
+        if (event.action_type === "KILL_SWITCH_ACTIVATED") {
+          useSessionStore.getState().reset();
         }
       } catch {
         /* ignore malformed messages */

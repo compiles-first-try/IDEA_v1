@@ -7,12 +7,13 @@
 import { WebSocketServer, type WebSocket } from "ws";
 import type { Server } from "node:http";
 import pg from "pg";
-import type { CacheClient } from "@rsf/foundation";
+import type { CacheClient, DbClient } from "@rsf/foundation";
 
 interface AuditStreamDeps {
   httpServer: Server;
   postgresUrl: string;
   cache?: CacheClient;
+  db?: DbClient;
 }
 
 /**
@@ -20,7 +21,7 @@ interface AuditStreamDeps {
  * Broadcasts audit events and accepts clarification responses.
  */
 export function attachAuditStream(deps: AuditStreamDeps): WebSocketServer {
-  const { httpServer, postgresUrl, cache } = deps;
+  const { httpServer, postgresUrl, cache, db } = deps;
 
   const wss = new WebSocketServer({ server: httpServer, path: "/audit-stream" });
   const clients = new Set<WebSocket>();
@@ -58,12 +59,12 @@ export function attachAuditStream(deps: AuditStreamDeps): WebSocketServer {
     const listener = new pg.Client({ connectionString: postgresUrl });
     await listener.connect();
 
-    // Create the notify trigger if it doesn't exist
+    // Create the notify trigger — sends only event_id to stay under 8KB NOTIFY limit
     await listener.query(`
       CREATE OR REPLACE FUNCTION notify_audit_event()
       RETURNS trigger AS $$
       BEGIN
-        PERFORM pg_notify('new_audit_event', row_to_json(NEW)::text);
+        PERFORM pg_notify('new_audit_event', NEW.event_id::text);
         RETURN NEW;
       END;
       $$ LANGUAGE plpgsql;
@@ -82,13 +83,28 @@ export function attachAuditStream(deps: AuditStreamDeps): WebSocketServer {
       END $$;
     `);
 
-    listener.on("notification", (msg) => {
-      if (msg.channel === "new_audit_event" && msg.payload) {
-        const data = JSON.stringify({ type: "audit_event", data: JSON.parse(msg.payload) });
-        for (const client of clients) {
-          if (client.readyState === 1) { // WebSocket.OPEN
-            client.send(data);
+    listener.on("notification", async (msg) => {
+      if (msg.channel === "new_audit_event" && msg.payload && db) {
+        try {
+          // Query the full event by ID (NOTIFY only sends the event_id to stay under 8KB limit)
+          const eventId = msg.payload;
+          const result = await db.query(
+            `SELECT event_id, timestamp, agent_id, agent_type, action_type, phase,
+                    session_id, inputs, outputs, model_used, tokens_in, tokens_out,
+                    cost_usd, duration_ms, status, error_message, reasoning_trace
+             FROM agent_events WHERE event_id = $1`,
+            [eventId],
+          );
+          if (result.rows.length === 0) return;
+
+          const data = JSON.stringify({ type: "audit_event", data: result.rows[0] });
+          for (const client of clients) {
+            if (client.readyState === 1) {
+              client.send(data);
+            }
           }
+        } catch {
+          // Query failed — skip this event
         }
       }
     });

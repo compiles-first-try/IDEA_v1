@@ -143,13 +143,21 @@ export function createManufacturingSpecInterpreter(
       modelUsed = "qwen2.5-coder:14b";
       const ollama = new Ollama({ host: ollamaBaseUrl });
 
-      const response = await ollama.generate({
-        model: modelUsed,
-        system: SYSTEM_PROMPT,
-        prompt: enrichedPrompt,
-        options: { num_predict: 2048, temperature: 0.1 },
-        format: "json",
-      });
+      const abortController = new AbortController();
+      const timeout = setTimeout(() => abortController.abort(), 60_000);
+
+      let response;
+      try {
+        response = await ollama.generate({
+          model: modelUsed,
+          system: SYSTEM_PROMPT,
+          prompt: enrichedPrompt,
+          options: { num_predict: 2048, temperature: 0.1 },
+          format: "json",
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
 
       rawResponse = response.response;
       tokensIn = response.prompt_eval_count ?? 0;

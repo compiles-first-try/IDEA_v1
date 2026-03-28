@@ -127,12 +127,23 @@ ${target.edgeCases.map((e) => `- ${e}`).join("\n")}
 
 Output ONLY the TypeScript function code, nothing else.`;
 
-    const response = await ollama.generate({
-      model: "qwen2.5-coder:14b",
-      system: CODE_GEN_PROMPT,
-      prompt,
-      options: { num_predict: 2048, temperature: 0.1 },
-    });
+    const timeoutId = setTimeout(() => { /* timeout cleanup handled by caller */ }, 60_000);
+    let response;
+    try {
+      response = await Promise.race([
+        ollama.generate({
+          model: "qwen2.5-coder:14b",
+          system: CODE_GEN_PROMPT,
+          prompt,
+          options: { num_predict: 2048, temperature: 0.1 },
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Ollama code generation timed out after 60s")), 60_000)
+        ),
+      ]);
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     const durationMs = Date.now() - start;
 

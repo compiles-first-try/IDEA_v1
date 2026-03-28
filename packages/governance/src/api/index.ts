@@ -397,8 +397,13 @@ export function createGovernanceApi(deps: GovernanceApiDeps): express.Express {
             });
           }
 
-          // Emit BUILD_COMPLETED with real artifacts
+          // Emit BUILD_COMPLETED — check if any stage failed
           const qualScore = result.artifacts.qualityReport.filter((g) => g.passed).length / Math.max(result.artifacts.qualityReport.length, 1);
+          const anyFailed = Object.values(result.stages).some((s) => s.status === "failed");
+          const failedStages = Object.entries(result.stages)
+            .filter(([, s]) => s.status === "failed")
+            .map(([name]) => name);
+
           await auditLogger.log({
             agentId: "governance-api",
             agentType: "GOVERNANCE",
@@ -417,8 +422,10 @@ export function createGovernanceApi(deps: GovernanceApiDeps): express.Express {
               uncertainty: result.uncertainty,
               routing: result.routing,
             },
-            status: "SUCCESS",
+            status: anyFailed ? "FAILURE" : "SUCCESS",
+            errorMessage: anyFailed ? `Stages failed: ${failedStages.join(", ")}` : undefined,
             durationMs: 0,
+            reasoningTrace: `Quality score: ${(qualScore * 100).toFixed(0)}%. ${anyFailed ? `Failed stages: ${failedStages.join(", ")}.` : "All stages passed."} Uncertainty: epistemic=${result.uncertainty.epistemic.toFixed(2)}, aleatoric=${result.uncertainty.aleatoric.toFixed(2)}, action=${result.uncertainty.action}.`,
           });
 
           // ── Store artifact for feedback + improvement data collection ──

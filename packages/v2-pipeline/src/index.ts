@@ -270,7 +270,8 @@ export async function createV2Pipeline(config: PipelineConfig): Promise<V2Pipeli
     });
     const codeResult = await codeGen.generate(target);
     const codeDuration = Date.now() - codeStart;
-    stages.codeGenerator = { status: "completed", durationMs: codeDuration, modelUsed: "qwen2.5-coder:14b" };
+    const codeStatus = codeResult.validation.valid ? "completed" : "failed";
+    stages.codeGenerator = { status: codeStatus, durationMs: codeDuration, modelUsed: "qwen2.5-coder:14b" };
     const codeTrace = `Generated ${codeResult.code.length} chars of ${target.language} for '${target.name}'. ` +
       `AST validation: ${codeResult.validation.valid ? "passed (zero errors)" : "failed with " + codeResult.validation.errors.length + " errors: " + codeResult.validation.errors.slice(0, 2).join("; ")}.`;
     await logStage("v2-pipeline-codegen", "CODE_GENERATE", codeDuration, tier, "qwen2.5-coder:14b", undefined, 0, undefined, undefined, codeTrace);

@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import pino from "pino";
 import type { DbClient } from "../db/index.js";
 
-const MAX_FIELD_BYTES = 10_240; // 10KB
+const MAX_FIELD_BYTES = 4_096; // 4KB per field — keeps total row under PostgreSQL NOTIFY 8KB limit
 
 export interface AuditEvent {
   agentId: string;
@@ -43,7 +43,21 @@ function truncateJson(obj: Record<string, unknown> | undefined): Record<string, 
   if (!obj) return obj;
   const str = JSON.stringify(obj);
   if (str.length <= MAX_FIELD_BYTES) return obj;
-  return { _truncated: true, _original_bytes: str.length, summary: str.slice(0, MAX_FIELD_BYTES - 100) };
+  // Progressively truncate string values within the object
+  const truncated: Record<string, unknown> = { _truncated: true, _original_bytes: str.length };
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === "string" && value.length > 500) {
+      truncated[key] = value.slice(0, 500) + "... [truncated]";
+    } else {
+      truncated[key] = value;
+    }
+  }
+  // Final safety check — if still too large, just store metadata
+  const truncatedStr = JSON.stringify(truncated);
+  if (truncatedStr.length > MAX_FIELD_BYTES) {
+    return { _truncated: true, _original_bytes: str.length, _keys: Object.keys(obj) };
+  }
+  return truncated;
 }
 
 /**
