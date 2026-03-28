@@ -5,6 +5,13 @@ interface Metrics {
   componentScores: Record<string, number>;
   regressionBudget: { used: number; total: number };
   lastCycle: { timestamp: string; changes: string; delta: number } | null;
+  feedbackCounts?: {
+    up: number;
+    down: number;
+    totalRated: number;
+    byTag: Record<string, number>;
+  };
+  totalBuilds?: number;
 }
 
 interface ImproveCycleProps {
@@ -59,6 +66,40 @@ export function ImproveCycle({ metrics, onTrigger, running }: ImproveCycleProps)
           <span className="text-[10px] text-[var(--color-text-secondary)]">{metrics.regressionBudget.used} of {metrics.regressionBudget.total} regressions used</span>
         </div>
       </section>
+
+      {/* Feedback data */}
+      {metrics.feedbackCounts && (
+        <section>
+          <h4 className="mb-2 text-xs font-semibold">User Feedback</h4>
+          <div className="grid grid-cols-4 gap-2 text-center">
+            <div className="rounded border border-[var(--color-border)] p-2">
+              <div className="text-sm font-semibold">{metrics.totalBuilds ?? 0}</div>
+              <div className="text-[10px] text-[var(--color-text-secondary)]">Total Builds</div>
+            </div>
+            <div className="rounded border border-[var(--color-border)] p-2">
+              <div className="text-sm font-semibold">{metrics.feedbackCounts.totalRated}</div>
+              <div className="text-[10px] text-[var(--color-text-secondary)]">Rated</div>
+            </div>
+            <div className="rounded border border-[var(--color-border)] p-2">
+              <div className="text-sm font-semibold text-[var(--color-accent-green)]">{metrics.feedbackCounts.up}</div>
+              <div className="text-[10px] text-[var(--color-text-secondary)]">Thumbs Up</div>
+            </div>
+            <div className="rounded border border-[var(--color-border)] p-2">
+              <div className="text-sm font-semibold text-[var(--color-accent-red)]">{metrics.feedbackCounts.down}</div>
+              <div className="text-[10px] text-[var(--color-text-secondary)]">Thumbs Down</div>
+            </div>
+          </div>
+          {Object.keys(metrics.feedbackCounts.byTag).length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {Object.entries(metrics.feedbackCounts.byTag).map(([tag, count]) => (
+                <span key={tag} className="rounded bg-[var(--color-bg-elevated)] px-2 py-0.5 text-[10px]">
+                  {tag}: {count}
+                </span>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Last cycle */}
       {metrics.lastCycle && (

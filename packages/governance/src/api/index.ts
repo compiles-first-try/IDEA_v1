@@ -398,6 +398,7 @@ export function createGovernanceApi(deps: GovernanceApiDeps): express.Express {
           }
 
           // Emit BUILD_COMPLETED with real artifacts
+          const qualScore = result.artifacts.qualityReport.filter((g) => g.passed).length / Math.max(result.artifacts.qualityReport.length, 1);
           await auditLogger.log({
             agentId: "governance-api",
             agentType: "GOVERNANCE",
@@ -419,6 +420,31 @@ export function createGovernanceApi(deps: GovernanceApiDeps): express.Express {
             status: "SUCCESS",
             durationMs: 0,
           });
+
+          // ── Store artifact for feedback + improvement data collection ──
+          try {
+            await db.query(
+              `INSERT INTO artifacts
+                (artifact_type, name, content, language, quality_score, created_by, build_session_id, metadata)
+               VALUES ($1, $2, $3, $4, $5, $6, $7::uuid, $8)`,
+              [
+                "CODE",
+                `build-${buildId.slice(0, 8)}`,
+                result.artifacts.code,
+                "typescript",
+                qualScore,
+                "v2-pipeline",
+                buildId,
+                JSON.stringify({
+                  spec: spec.slice(0, 1000),
+                  tests: result.artifacts.tests.slice(0, 2000),
+                  routing: result.routing,
+                  uncertainty: result.uncertainty,
+                  qualityReport: result.artifacts.qualityReport,
+                }),
+              ],
+            );
+          } catch { /* artifact insert failed — non-blocking */ }
         } else {
           // ── Simulation Fallback (no pipeline instance) ──
           const stages = [
@@ -1215,11 +1241,11 @@ export function createGovernanceApi(deps: GovernanceApiDeps): express.Express {
       );
       const regressionsUsed = regressionResult.rows[0]?.failures ?? 0;
 
-      // Last improvement cycle from audit events
+      // Last improvement cycle from audit events (look for actual cycle actions, not just triggers)
       const lastCycleResult = await db.query(
-        `SELECT timestamp, inputs, outputs
+        `SELECT timestamp, inputs, outputs, action_type
          FROM agent_events
-         WHERE action_type = 'IMPROVEMENT_TRIGGERED'
+         WHERE action_type IN ('IMPROVEMENT_TRIGGERED', 'MEASURE', 'APPLY', 'RECORD')
          ORDER BY timestamp DESC
          LIMIT 1`,
         [],
@@ -1230,16 +1256,52 @@ export function createGovernanceApi(deps: GovernanceApiDeps): express.Express {
         const outputs = (row.outputs ?? {}) as Record<string, unknown>;
         lastCycle = {
           timestamp: row.timestamp as string,
-          changes: (outputs.changes as string) ?? "Improvement cycle completed",
+          changes: (outputs.changes as string) ?? `${row.action_type as string} cycle event`,
           delta: (outputs.delta as number) ?? 0,
         };
       }
+
+      // Feedback distribution from artifacts
+      const feedbackResult = await db.query(
+        `SELECT
+           COUNT(*) FILTER (WHERE metadata->>'user_rating' = 'up')::int AS thumbs_up,
+           COUNT(*) FILTER (WHERE metadata->>'user_rating' = 'down')::int AS thumbs_down,
+           COUNT(*) FILTER (WHERE metadata->>'user_rating' IS NOT NULL)::int AS total_rated
+         FROM artifacts`,
+        [],
+      );
+      const fb = feedbackResult.rows[0] ?? {};
+
+      const tagResult = await db.query(
+        `SELECT metadata->>'user_tag' AS tag, COUNT(*)::int AS cnt
+         FROM artifacts
+         WHERE metadata->>'user_tag' IS NOT NULL
+         GROUP BY metadata->>'user_tag'`,
+        [],
+      );
+      const byTag: Record<string, number> = {};
+      for (const row of tagResult.rows) {
+        byTag[row.tag as string] = row.cnt as number;
+      }
+
+      // Total builds for context
+      const buildCountResult = await db.query(
+        `SELECT COUNT(*)::int AS total FROM artifacts WHERE build_session_id IS NOT NULL`,
+        [],
+      );
 
       res.json({
         overallScores,
         componentScores,
         regressionBudget: { used: regressionsUsed as number, total: 5 },
         lastCycle,
+        feedbackCounts: {
+          up: (fb.thumbs_up as number) ?? 0,
+          down: (fb.thumbs_down as number) ?? 0,
+          totalRated: (fb.total_rated as number) ?? 0,
+          byTag,
+        },
+        totalBuilds: (buildCountResult.rows[0]?.total as number) ?? 0,
       });
     } catch {
       res.status(500).json({ error: "Failed to get improvement metrics" });

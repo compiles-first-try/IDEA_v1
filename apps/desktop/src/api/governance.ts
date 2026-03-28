@@ -175,6 +175,13 @@ export interface ImproveMetrics {
   componentScores: Record<string, number>;
   regressionBudget: { used: number; total: number };
   lastCycle: { timestamp: string; changes: string; delta: number } | null;
+  feedbackCounts?: {
+    up: number;
+    down: number;
+    totalRated: number;
+    byTag: Record<string, number>;
+  };
+  totalBuilds?: number;
 }
 
 export const governanceApi = {
