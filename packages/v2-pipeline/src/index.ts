@@ -65,6 +65,7 @@ interface PipelineResult {
 interface Classification {
   tier: 1 | 2 | 3;
   taskType: "DETERMINISTIC" | "SIMPLE" | "STANDARD" | "COMPLEX";
+  reason: string;
 }
 
 export interface V2Pipeline {
@@ -74,18 +75,69 @@ export interface V2Pipeline {
   shutdown: () => Promise<void>;
 }
 
-// ── Classification ──
+// ── Classification (two-phase: regex fast path + heuristic scoring) ──
 
 const DETERMINISTIC_PATTERNS = [/validate.*json/i, /schema.*valid/i, /format/i, /lint/i, /type.?check/i];
 const SIMPLE_PATTERNS = [/single.*function/i, /rename/i, /docstring/i, /comment/i, /csv.*json/i];
-const COMPLEX_PATTERNS = [/novel.*algorithm/i, /architect/i, /ambiguous/i, /multi.?file.*refactor/i, /contradictory/i];
-// Everything else → STANDARD
+const COMPLEX_PATTERNS = [
+  /novel.*algorithm/i, /architect/i, /ambiguous/i, /multi.?file.*refactor/i, /contradictory/i,
+  /website/i, /web\s*app/i, /application/i, /multiple.*(?:page|file|component|module)/i,
+  /design.*(?:decision|pattern|system)/i, /full.?stack/i, /dashboard/i, /platform/i,
+];
+
+function analyzeComplexity(spec: string): { score: number; signals: string[] } {
+  const signals: string[] = [];
+
+  // Length signal — longer specs imply broader scope
+  if (spec.length > 500) signals.push("long spec (>500 chars)");
+  else if (spec.length > 200) signals.push("moderate spec length");
+
+  // Ambiguity signals
+  if (/\?/.test(spec)) signals.push("contains questions");
+  if (/\b(or|maybe|either|possibly|could|might)\b/i.test(spec)) signals.push("ambiguous language");
+  if (/\b(unclear|not sure|depends)\b/i.test(spec)) signals.push("explicit uncertainty");
+
+  // Scope signals
+  const sentences = spec.split(/[.!?]+/).filter((s) => s.trim().length > 10);
+  if (sentences.length > 3) signals.push(`multi-sentence spec (${sentences.length} sentences)`);
+
+  // Complexity signals
+  if (/\b(page|route|endpoint|component|service|module)\b/i.test(spec)) signals.push("multi-component language");
+  if (/\b(database|auth|login|user|api|crud|rest)\b/i.test(spec)) signals.push("infrastructure terms");
+  if (/\b(deploy|docker|ci|cd|production)\b/i.test(spec)) signals.push("deployment scope");
+
+  return { score: signals.length, signals };
+}
 
 function classifyTask(spec: string): Classification {
-  if (DETERMINISTIC_PATTERNS.some((p) => p.test(spec))) return { tier: 1, taskType: "DETERMINISTIC" };
-  if (SIMPLE_PATTERNS.some((p) => p.test(spec))) return { tier: 1, taskType: "SIMPLE" };
-  if (COMPLEX_PATTERNS.some((p) => p.test(spec))) return { tier: 3, taskType: "COMPLEX" };
-  return { tier: 2, taskType: "STANDARD" };
+  // Phase 1: Regex fast path for clear matches
+  for (const p of DETERMINISTIC_PATTERNS) {
+    if (p.test(spec)) return { tier: 1, taskType: "DETERMINISTIC", reason: `Matched deterministic pattern: ${p}` };
+  }
+  for (const p of SIMPLE_PATTERNS) {
+    if (p.test(spec)) return { tier: 1, taskType: "SIMPLE", reason: `Matched simple pattern: ${p}` };
+  }
+  for (const p of COMPLEX_PATTERNS) {
+    if (p.test(spec)) return { tier: 3, taskType: "COMPLEX", reason: `Matched complex pattern: ${p}` };
+  }
+
+  // Phase 2: Heuristic scoring for the STANDARD catch-all
+  const { score, signals } = analyzeComplexity(spec);
+  if (score >= 2) {
+    return {
+      tier: 3,
+      taskType: "COMPLEX",
+      reason: `Heuristic upgrade (score ${score}): ${signals.join(", ")}`,
+    };
+  }
+
+  return {
+    tier: 2,
+    taskType: "STANDARD",
+    reason: signals.length > 0
+      ? `Default tier — signals below threshold (score ${score}): ${signals.join(", ")}`
+      : "Default tier — no complexity signals detected",
+  };
 }
 
 // ── Pipeline Factory ──
@@ -177,7 +229,7 @@ export async function createV2Pipeline(config: PipelineConfig): Promise<V2Pipeli
 
     const classification = classifyTask(spec);
     const tier = classification.tier;
-    const classificationTrace = `Classified spec (${spec.length} chars) as ${classification.taskType} (tier ${tier}). Matched pattern: ${classification.taskType === "STANDARD" ? "no pattern matched — default tier" : classification.taskType + " pattern"}.`;
+    const classificationTrace = `Classified spec (${spec.length} chars) as ${classification.taskType} (tier ${tier}). ${classification.reason}`;
 
     const stages: PipelineResult["stages"] = {
       specInterpreter: { status: "skipped", durationMs: 0 },
@@ -190,20 +242,25 @@ export async function createV2Pipeline(config: PipelineConfig): Promise<V2Pipeli
 
     // ── Stage 1: Spec Interpretation ──
     const specStart = Date.now();
+    const useClaudeForSpec = tier >= 3;
+    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
     const specInterpreter = createManufacturingSpecInterpreter({
       cache,
       auditLogger,
       ollamaBaseUrl: config.ollamaBaseUrl,
       searchContext,
+      useClaudeApi: useClaudeForSpec && !!anthropicApiKey,
+      anthropicApiKey,
     });
     const target = await specInterpreter.interpret(spec);
     const specDuration = Date.now() - specStart;
-    stages.specInterpreter = { status: "completed", durationMs: specDuration, modelUsed: "qwen2.5-coder:14b" };
+    const specModel = useClaudeForSpec && anthropicApiKey ? "claude-haiku-4-5-20251001" : "qwen2.5-coder:14b";
+    stages.specInterpreter = { status: "completed", durationMs: specDuration, modelUsed: specModel };
     const specTrace = `Parsed spec (${spec.length} chars) as ${target.type} '${target.name}'. ` +
       `Language: ${target.language}. Signature: ${target.functionSignature}. ` +
       `Extracted ${target.requirements.length} requirements, ${target.edgeCases.length} edge cases, ${target.testHints.length} test hints. ` +
       classificationTrace;
-    await logStage("v2-pipeline-spec", "SPEC_INTERPRET", specDuration, tier, "qwen2.5-coder:14b", undefined, undefined, undefined, undefined, specTrace);
+    await logStage("v2-pipeline-spec", "SPEC_INTERPRET", specDuration, tier, specModel, undefined, undefined, undefined, undefined, specTrace);
 
     // ── Stage 2: Code Generation ──
     const codeStart = Date.now();
