@@ -142,7 +142,7 @@ export function createGovernanceApi(deps: GovernanceApiDeps): express.Express {
         "model_used", "tokens_in", "tokens_out", "cost_usd",
         "duration_ms", "status", "error_message", "parent_event_id",
         "task_tier", "task_cost_usd", "task_quality_score",
-        "cache_hit", "escalated_from_tier",
+        "cache_hit", "escalated_from_tier", "reasoning_trace",
       ].join(", ");
 
       const conditions: string[] = [];

@@ -16,6 +16,7 @@ interface AuditEvent {
   inputs?: Record<string, unknown>;
   outputs?: Record<string, unknown>;
   error_message: string | null;
+  reasoning_trace?: string | null;
 }
 
 interface Filters {
@@ -112,6 +113,12 @@ export function AuditTable({ events, total, page, onPageChange, onFilterChange }
                   <tr key={`${e.event_id}-detail`}>
                     <td colSpan={8} className="bg-[var(--color-bg-secondary)] p-3">
                       <div data-testid={`event-detail-${e.event_id}`} className="space-y-2 text-[10px]">
+                        {e.reasoning_trace && (
+                          <div className="rounded bg-[var(--color-accent-blue)]/10 border border-[var(--color-accent-blue)]/20 p-2">
+                            <span className="font-semibold text-[var(--color-accent-blue)]">Reasoning:</span>
+                            <p className="mt-1 whitespace-pre-wrap text-[var(--color-text-primary)]">{e.reasoning_trace}</p>
+                          </div>
+                        )}
                         {e.inputs && <div><span className="font-semibold">Inputs:</span> <pre className="mt-1 whitespace-pre-wrap">{JSON.stringify(e.inputs, null, 2)}</pre></div>}
                         {e.outputs && <div><span className="font-semibold">Outputs:</span> <pre className="mt-1 whitespace-pre-wrap">{JSON.stringify(e.outputs, null, 2)}</pre></div>}
                         {e.error_message && <div className="text-[var(--color-accent-red)]"><span className="font-semibold">Error:</span> {e.error_message}</div>}

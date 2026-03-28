@@ -28,6 +28,7 @@ export interface AuditEvent {
   inputs?: Record<string, unknown>;
   outputs?: Record<string, unknown>;
   error_message: string | null;
+  reasoning_trace?: string | null;
 }
 
 export interface AuditFilters {

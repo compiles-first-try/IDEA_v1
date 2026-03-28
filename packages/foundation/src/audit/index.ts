@@ -22,6 +22,7 @@ export interface AuditEvent {
   status: "SUCCESS" | "FAILURE" | "KILLED" | "TIMEOUT";
   errorMessage?: string;
   parentEventId?: string;
+  reasoningTrace?: string;
 }
 
 export interface AuditResult {
@@ -83,6 +84,7 @@ export async function createAuditLogger(
         status: event.status,
         error_message: event.errorMessage ?? null,
         parent_event_id: event.parentEventId ?? null,
+        reasoning_trace: event.reasoningTrace ?? null,
       };
 
       // Atomic dual-write: PostgreSQL transaction + JSONL append
@@ -93,8 +95,9 @@ export async function createAuditLogger(
           `INSERT INTO agent_events
             (event_id, timestamp, agent_id, agent_type, action_type, phase,
              session_id, inputs, outputs, model_used, tokens_in, tokens_out,
-             cost_usd, duration_ms, status, error_message, parent_event_id)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+             cost_usd, duration_ms, status, error_message, parent_event_id,
+             reasoning_trace)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
           [
             record.event_id,
             record.timestamp,
@@ -113,6 +116,7 @@ export async function createAuditLogger(
             record.status,
             record.error_message,
             record.parent_event_id,
+            record.reasoning_trace,
           ]
         );
 

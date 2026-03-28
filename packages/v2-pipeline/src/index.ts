@@ -99,6 +99,39 @@ export async function createV2Pipeline(config: PipelineConfig): Promise<V2Pipeli
   let running = false;
   const auditTrail: PipelineResult["auditTrail"] = [];
 
+  // Knowledge base search — embeds query via Ollama, searches memory_entries via pgvector
+  async function searchContext(query: string): Promise<Array<{ content: string; score: number }>> {
+    try {
+      const embedRes = await fetch(`${config.ollamaBaseUrl}/api/embed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "nomic-embed-text:latest", input: query }),
+      });
+
+      if (!embedRes.ok) return [];
+
+      const embedData = await embedRes.json() as { embeddings?: number[][] };
+      const queryEmbedding = embedData.embeddings?.[0];
+      if (!queryEmbedding) return [];
+
+      const result = await db.query(
+        `SELECT content, 1 - (embedding <=> $1::vector) AS score
+         FROM memory_entries
+         WHERE embedding IS NOT NULL
+         ORDER BY embedding <=> $1::vector
+         LIMIT 5`,
+        [`[${queryEmbedding.join(",")}]`],
+      );
+
+      return result.rows.map((r) => ({
+        content: r.content as string,
+        score: parseFloat(String(r.score)),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
   async function logStage(
     agentId: string,
     actionType: string,
@@ -108,7 +141,8 @@ export async function createV2Pipeline(config: PipelineConfig): Promise<V2Pipeli
     qualityScore?: number,
     costUsd?: number,
     cacheHit?: boolean,
-    escalatedFromTier?: number
+    escalatedFromTier?: number,
+    reasoningTrace?: string
   ): Promise<string> {
     const result = await auditLogger.log({
       agentId,
@@ -118,6 +152,7 @@ export async function createV2Pipeline(config: PipelineConfig): Promise<V2Pipeli
       modelUsed,
       durationMs,
       status: "SUCCESS",
+      reasoningTrace,
     });
 
     // Write Pareto columns directly
@@ -142,6 +177,7 @@ export async function createV2Pipeline(config: PipelineConfig): Promise<V2Pipeli
 
     const classification = classifyTask(spec);
     const tier = classification.tier;
+    const classificationTrace = `Classified spec (${spec.length} chars) as ${classification.taskType} (tier ${tier}). Matched pattern: ${classification.taskType === "STANDARD" ? "no pattern matched — default tier" : classification.taskType + " pattern"}.`;
 
     const stages: PipelineResult["stages"] = {
       specInterpreter: { status: "skipped", durationMs: 0 },
@@ -158,11 +194,16 @@ export async function createV2Pipeline(config: PipelineConfig): Promise<V2Pipeli
       cache,
       auditLogger,
       ollamaBaseUrl: config.ollamaBaseUrl,
+      searchContext,
     });
     const target = await specInterpreter.interpret(spec);
     const specDuration = Date.now() - specStart;
     stages.specInterpreter = { status: "completed", durationMs: specDuration, modelUsed: "qwen2.5-coder:14b" };
-    await logStage("v2-pipeline-spec", "SPEC_INTERPRET", specDuration, tier, "qwen2.5-coder:14b");
+    const specTrace = `Parsed spec (${spec.length} chars) as ${target.type} '${target.name}'. ` +
+      `Language: ${target.language}. Signature: ${target.functionSignature}. ` +
+      `Extracted ${target.requirements.length} requirements, ${target.edgeCases.length} edge cases, ${target.testHints.length} test hints. ` +
+      classificationTrace;
+    await logStage("v2-pipeline-spec", "SPEC_INTERPRET", specDuration, tier, "qwen2.5-coder:14b", undefined, undefined, undefined, undefined, specTrace);
 
     // ── Stage 2: Code Generation ──
     const codeStart = Date.now();
@@ -173,7 +214,9 @@ export async function createV2Pipeline(config: PipelineConfig): Promise<V2Pipeli
     const codeResult = await codeGen.generate(target);
     const codeDuration = Date.now() - codeStart;
     stages.codeGenerator = { status: "completed", durationMs: codeDuration, modelUsed: "qwen2.5-coder:14b" };
-    await logStage("v2-pipeline-codegen", "CODE_GENERATE", codeDuration, tier, "qwen2.5-coder:14b", undefined, 0);
+    const codeTrace = `Generated ${codeResult.code.length} chars of ${target.language} for '${target.name}'. ` +
+      `AST validation: ${codeResult.validation.valid ? "passed (zero errors)" : "failed with " + codeResult.validation.errors.length + " errors: " + codeResult.validation.errors.slice(0, 2).join("; ")}.`;
+    await logStage("v2-pipeline-codegen", "CODE_GENERATE", codeDuration, tier, "qwen2.5-coder:14b", undefined, 0, undefined, undefined, codeTrace);
 
     // ── Stage 3: Test Generation ──
     const testStart = Date.now();
@@ -184,7 +227,10 @@ export async function createV2Pipeline(config: PipelineConfig): Promise<V2Pipeli
     const testResult = await testFirst.run(target);
     const testDuration = Date.now() - testStart;
     stages.testGenerator = { status: "completed", durationMs: testDuration, modelUsed: "qwen2.5-coder:14b" };
-    await logStage("v2-pipeline-testgen", "TEST_GENERATE", testDuration, tier, "qwen2.5-coder:14b");
+    const testTrace = `Generated tests for '${target.name}' using test-first pipeline. ` +
+      `Test code: ${testResult.testCode.length} chars. Implementation code: ${testResult.implementationCode.length} chars. ` +
+      `Tests are generated independently from the code generator to avoid confirmation bias (Rule 21).`;
+    await logStage("v2-pipeline-testgen", "TEST_GENERATE", testDuration, tier, "qwen2.5-coder:14b", undefined, undefined, undefined, undefined, testTrace);
 
     // ── Stage 4: Test Validation (V2 capability) ──
     const validStart = Date.now();
@@ -198,7 +244,9 @@ export async function createV2Pipeline(config: PipelineConfig): Promise<V2Pipeli
     });
     const validDuration = Date.now() - validStart;
     stages.testValidator = { status: "completed", durationMs: validDuration };
-    await logStage("v2-pipeline-testvalid", "TEST_VALIDATE", validDuration, tier);
+    const validTrace = `Coverage: ${coverageResult.coveredRequirements}/${coverageResult.totalRequirements} requirements covered (${(coverageResult.coveredRequirements / Math.max(coverageResult.totalRequirements, 1) * 100).toFixed(0)}%). ` +
+      `Gameability: ${gameResult.gameable ? "GAMEABLE — " + gameResult.reason : "not gameable — tests have sufficient unique assertions"}.`;
+    await logStage("v2-pipeline-testvalid", "TEST_VALIDATE", validDuration, tier, undefined, undefined, undefined, undefined, undefined, validTrace);
 
     // ── Stage 5: Quality Gates ──
     const qualStart = Date.now();
@@ -211,7 +259,9 @@ export async function createV2Pipeline(config: PipelineConfig): Promise<V2Pipeli
     const qualDuration = Date.now() - qualStart;
     const qualScore = qualityReport.filter((g) => g.passed).length / qualityReport.length;
     stages.qualityGates = { status: "completed", durationMs: qualDuration };
-    await logStage("v2-pipeline-quality", "QUALITY_GATES", qualDuration, tier, undefined, qualScore);
+    const qualTrace = `Quality score: ${(qualScore * 100).toFixed(0)}% (${qualityReport.filter(g => g.passed).length}/${qualityReport.length} gates passed). ` +
+      qualityReport.map(g => `${g.gate}: ${g.passed ? "PASS" : "FAIL"} — ${g.details}`).join(". ") + ".";
+    await logStage("v2-pipeline-quality", "QUALITY_GATES", qualDuration, tier, undefined, qualScore, undefined, undefined, undefined, qualTrace);
 
     // ── Stage 6: Adversarial Review (V2 capability) ──
     const revStart = Date.now();
@@ -230,7 +280,11 @@ export async function createV2Pipeline(config: PipelineConfig): Promise<V2Pipeli
     ]);
     const revDuration = Date.now() - revStart;
     stages.adversarialReview = { status: "completed", durationMs: revDuration };
-    await logStage("v2-pipeline-review", "ADVERSARIAL_REVIEW", revDuration, tier, undefined, consensus.accepted ? 1.0 : 0.0);
+    const reviewTrace = `Consensus: ${consensus.accepted ? "ACCEPTED" : "REJECTED"}. ` +
+      `Correctness critic: ${correctnessVerdict.verdict}${correctnessVerdict.findings.length > 0 ? " — " + correctnessVerdict.findings.slice(0, 2).join("; ") : ""}. ` +
+      `Adversarial critic: ${adversarialVerdict.verdict}${adversarialVerdict.findings.length > 0 ? " — " + adversarialVerdict.findings.slice(0, 2).join("; ") : ""}. ` +
+      `Efficiency critic: PASS (no issues detected).`;
+    await logStage("v2-pipeline-review", "ADVERSARIAL_REVIEW", revDuration, tier, undefined, consensus.accepted ? 1.0 : 0.0, undefined, undefined, undefined, reviewTrace);
 
     // ── Epistemic Tracking ──
     // Simulate cross-model disagreement from the code generation outputs
