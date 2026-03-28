@@ -8,13 +8,63 @@ export function useBuild() {
   const [buildId, setBuildId] = useState<string | null>(null);
   const buildIdRef = useRef<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const pendingEventsRef = useRef<Array<Record<string, unknown>>>([]);
   const { startBuild, updateStage, completeBuild, setClarification, clearClarification } = useSessionStore();
 
-  // Listen to WebSocket for stage events + clarification requests
-  useEffect(() => {
-    if (!buildId) return;
-    buildIdRef.current = buildId;
+  // Process a single WebSocket event
+  const processEvent = useCallback((event: Record<string, unknown>) => {
+    const currentBuildId = buildIdRef.current;
+    const isGlobalEvent = event.action_type === "KILL_SWITCH_ACTIVATED";
 
+    if (!isGlobalEvent && String(event.session_id ?? "") !== currentBuildId) return;
+
+    const stageId = (event.inputs as Record<string, unknown> | undefined)?.stageId as string | undefined;
+
+    if (event.action_type === "STAGE_STARTED" && stageId) {
+      updateStage(stageId, {
+        status: "running",
+        modelUsed: (event.model_used as string) ?? null,
+      });
+    }
+
+    if (event.action_type === "STAGE_COMPLETED" && stageId) {
+      updateStage(stageId, {
+        status: "passed",
+        durationMs: (event.duration_ms as number) ?? null,
+        modelUsed: (event.model_used as string) ?? null,
+      });
+    }
+
+    if (event.action_type === "CLARIFICATION_REQUESTED") {
+      const outputs = (event.outputs ?? {}) as Record<string, unknown>;
+      const questions = (outputs.questions ?? []) as string[];
+      if (questions.length > 0) {
+        setClarification(questions);
+      }
+    }
+
+    if (event.action_type === "CLARIFICATION_RESOLVED" || event.action_type === "CLARIFICATION_TIMEOUT") {
+      clearClarification();
+    }
+
+    if (event.action_type === "BUILD_COMPLETED") {
+      const outputs = (event.outputs ?? {}) as Record<string, unknown>;
+      const artifacts: BuildArtifacts = {
+        generatedCode: (outputs.generatedCode as string) ?? "",
+        generatedTests: (outputs.generatedTests as string) ?? "",
+        qualityGates: (outputs.qualityGates as BuildArtifacts["qualityGates"]) ?? [],
+        auditTrail: [],
+      };
+      completeBuild(artifacts);
+    }
+
+    if (event.action_type === "KILL_SWITCH_ACTIVATED") {
+      useSessionStore.getState().reset();
+    }
+  }, [updateStage, completeBuild, setClarification, clearClarification]);
+
+  // Connect WebSocket on mount — stays connected across builds
+  useEffect(() => {
     const ws = new WebSocket(WS_URL);
     wsRef.current = ws;
 
@@ -23,53 +73,14 @@ export function useBuild() {
         const msg = JSON.parse(ev.data);
         if (msg.type !== "audit_event" || !msg.data) return;
 
-        const event = msg.data;
-        // Kill switch events are global — don't filter by session_id
-        const isGlobalEvent = event.action_type === "KILL_SWITCH_ACTIVATED";
-        if (!isGlobalEvent && event.session_id !== buildIdRef.current) return;
+        const event = msg.data as Record<string, unknown>;
 
-        const stageId = event.inputs?.stageId as string | undefined;
-
-        if (event.action_type === "STAGE_STARTED" && stageId) {
-          updateStage(stageId, {
-            status: "running",
-            modelUsed: event.model_used ?? null,
-          });
-        }
-
-        if (event.action_type === "STAGE_COMPLETED" && stageId) {
-          updateStage(stageId, {
-            status: "passed",
-            durationMs: event.duration_ms ?? null,
-            modelUsed: event.model_used ?? null,
-          });
-        }
-
-        if (event.action_type === "CLARIFICATION_REQUESTED") {
-          const questions = (event.outputs?.questions ?? []) as string[];
-          if (questions.length > 0) {
-            setClarification(questions);
-          }
-        }
-
-        if (event.action_type === "CLARIFICATION_RESOLVED" || event.action_type === "CLARIFICATION_TIMEOUT") {
-          clearClarification();
-        }
-
-        if (event.action_type === "BUILD_COMPLETED") {
-          const outputs = event.outputs ?? {};
-          const artifacts: BuildArtifacts = {
-            generatedCode: (outputs.generatedCode as string) ?? "",
-            generatedTests: (outputs.generatedTests as string) ?? "",
-            qualityGates: (outputs.qualityGates as BuildArtifacts["qualityGates"]) ?? [],
-            auditTrail: [],
-          };
-          completeBuild(artifacts);
-        }
-
-        // Kill switch activated — reset build state so UI is usable again
-        if (event.action_type === "KILL_SWITCH_ACTIVATED") {
-          useSessionStore.getState().reset();
+        if (buildIdRef.current) {
+          // We have a buildId — process immediately
+          processEvent(event);
+        } else {
+          // No buildId yet — queue the event for replay
+          pendingEventsRef.current.push(event);
         }
       } catch {
         /* ignore malformed messages */
@@ -80,7 +91,20 @@ export function useBuild() {
       ws.close();
       wsRef.current = null;
     };
-  }, [buildId, updateStage, completeBuild, setClarification, clearClarification]);
+  }, [processEvent]);
+
+  // When buildId is set, replay any queued events that match
+  useEffect(() => {
+    if (!buildId) return;
+    buildIdRef.current = buildId;
+
+    // Replay pending events that were received before buildId was set
+    const pending = pendingEventsRef.current;
+    pendingEventsRef.current = [];
+    for (const event of pending) {
+      processEvent(event);
+    }
+  }, [buildId, processEvent]);
 
   const mutation = useMutation({
     mutationFn: async ({
@@ -94,6 +118,7 @@ export function useBuild() {
     },
     onMutate: () => {
       startBuild();
+      pendingEventsRef.current = [];
     },
     onSuccess: (response) => {
       setBuildId(response.data.buildId);
@@ -107,7 +132,6 @@ export function useBuild() {
     [mutation],
   );
 
-  // Send clarification answers back via WebSocket
   const sendClarificationResponse = useCallback(
     (answers: Record<string, string>) => {
       if (wsRef.current?.readyState === WebSocket.OPEN && buildIdRef.current) {
@@ -124,7 +148,6 @@ export function useBuild() {
     [clearClarification],
   );
 
-  // Skip clarification — send empty answers so server times out / proceeds
   const skipClarification = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN && buildIdRef.current) {
       wsRef.current.send(
