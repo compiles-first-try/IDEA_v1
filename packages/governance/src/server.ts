@@ -56,10 +56,11 @@ async function main() {
   const app = createGovernanceApi({ cache, db, auditLogger, v2Pipeline });
   const httpServer = createServer(app);
 
-  // Attach WebSocket audit stream
+  // Attach WebSocket audit stream (bidirectional — also accepts clarification responses)
   attachAuditStream({
     httpServer,
     postgresUrl: process.env.POSTGRES_URL!,
+    cache,
   });
 
   httpServer.listen(PORT, () => {

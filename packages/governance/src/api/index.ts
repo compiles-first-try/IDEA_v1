@@ -249,6 +249,111 @@ export function createGovernanceApi(deps: GovernanceApiDeps): express.Express {
       // Run pipeline asynchronously — response returns immediately.
       // Stage events flow through audit logger → WebSocket.
       (async () => {
+        let pipelineSpec = spec;
+
+        // ── Clarification Loop ──
+        // Detect ambiguity before running the pipeline. If questions are needed,
+        // emit CLARIFICATION_REQUESTED and wait for user answers via WebSocket → Redis.
+        const anthropicKey = process.env.ANTHROPIC_API_KEY;
+        if (anthropicKey) {
+          try {
+            const { detectAmbiguity } = await import("../../../v2-pipeline/src/clarification.js");
+
+            // Get context chunks for the clarification agent
+            let contextTexts: string[] = [];
+            try {
+              const ollamaHost = process.env.OLLAMA_HOST ?? "http://localhost:11434";
+              const embedRes = await fetch(`${ollamaHost}/api/embed`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ model: "nomic-embed-text:latest", input: spec }),
+              });
+              if (embedRes.ok) {
+                const embedData = await embedRes.json() as { embeddings?: number[][] };
+                const qEmb = embedData.embeddings?.[0];
+                if (qEmb) {
+                  const ctxResult = await db.query(
+                    `SELECT content FROM memory_entries WHERE embedding IS NOT NULL ORDER BY embedding <=> $1::vector LIMIT 3`,
+                    [`[${qEmb.join(",")}]`],
+                  );
+                  contextTexts = ctxResult.rows.map((r) => r.content as string);
+                }
+              }
+            } catch { /* context retrieval failed — proceed without */ }
+
+            const clarification = await detectAmbiguity(spec, contextTexts, anthropicKey);
+
+            if (clarification.needsClarification && clarification.questions.length > 0) {
+              // Emit CLARIFICATION_REQUESTED event → flows via WebSocket to UI
+              await auditLogger.log({
+                agentId: "clarification-agent",
+                agentType: "PIPELINE",
+                actionType: "CLARIFICATION_REQUESTED",
+                phase: "MANUFACTURING",
+                sessionId: buildId,
+                outputs: { questions: clarification.questions, confidence: clarification.confidence },
+                status: "SUCCESS",
+                durationMs: 0,
+                reasoningTrace: `Spec confidence: ${clarification.confidence.toFixed(2)}. Asked ${clarification.questions.length} questions: ${clarification.questions.join(" | ")}`,
+              });
+
+              // Update build state
+              await cache.setJson(`rsf:build:${buildId}`, {
+                spec, reasoningMode, status: "awaiting_clarification",
+                questions: clarification.questions,
+                submittedAt: new Date().toISOString(),
+              }, 86400);
+
+              // Poll Redis for answers (timeout: 5 minutes)
+              const pollStart = Date.now();
+              const TIMEOUT_MS = 5 * 60 * 1000;
+              let answers: Record<string, unknown> | null = null;
+
+              while (Date.now() - pollStart < TIMEOUT_MS) {
+                answers = await cache.getJson<Record<string, unknown>>(`rsf:clarification:${buildId}:response`);
+                if (answers) break;
+                await new Promise((r) => setTimeout(r, 1000));
+              }
+
+              if (answers) {
+                // Enrich the spec with clarification answers
+                const answerEntries = Object.entries(answers);
+                const clarificationBlock = answerEntries
+                  .map(([q, a]) => `Q: ${q}\nA: ${a}`)
+                  .join("\n\n");
+                pipelineSpec = `${spec}\n\n## Clarifications\n${clarificationBlock}`;
+
+                await auditLogger.log({
+                  agentId: "clarification-agent",
+                  agentType: "PIPELINE",
+                  actionType: "CLARIFICATION_RESOLVED",
+                  phase: "MANUFACTURING",
+                  sessionId: buildId,
+                  inputs: answers,
+                  status: "SUCCESS",
+                  durationMs: Date.now() - pollStart,
+                  reasoningTrace: `Received ${answerEntries.length} answers after ${((Date.now() - pollStart) / 1000).toFixed(0)}s. Enriched spec from ${spec.length} to ${pipelineSpec.length} chars.`,
+                });
+              } else {
+                // Timeout — proceed with original spec
+                await auditLogger.log({
+                  agentId: "clarification-agent",
+                  agentType: "PIPELINE",
+                  actionType: "CLARIFICATION_TIMEOUT",
+                  phase: "MANUFACTURING",
+                  sessionId: buildId,
+                  status: "SUCCESS",
+                  durationMs: TIMEOUT_MS,
+                  reasoningTrace: "Clarification timed out after 5 minutes. Proceeding with original spec.",
+                });
+              }
+
+              // Clean up Redis keys
+              await cache.del(`rsf:clarification:${buildId}:response`);
+            }
+          } catch { /* Clarification failed — proceed without */ }
+        }
+
         const STAGE_MAP: [string, string][] = [
           ["specInterpreter", "spec-interpreter"],
           ["codeGenerator", "code-gen"],
@@ -274,7 +379,7 @@ export function createGovernanceApi(deps: GovernanceApiDeps): express.Express {
             });
           }
 
-          const result = await v2Pipeline.run(spec);
+          const result = await v2Pipeline.run(pipelineSpec);
 
           // Emit STAGE_COMPLETED for each stage with real data
           for (const [pipelineKey, uiId] of STAGE_MAP) {

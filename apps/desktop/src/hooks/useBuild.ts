@@ -7,14 +7,16 @@ import { WS_URL } from "@/api/client.ts";
 export function useBuild() {
   const [buildId, setBuildId] = useState<string | null>(null);
   const buildIdRef = useRef<string | null>(null);
-  const { startBuild, updateStage, completeBuild } = useSessionStore();
+  const wsRef = useRef<WebSocket | null>(null);
+  const { startBuild, updateStage, completeBuild, setClarification, clearClarification } = useSessionStore();
 
-  // Listen to WebSocket for stage events matching our buildId
+  // Listen to WebSocket for stage events + clarification requests
   useEffect(() => {
     if (!buildId) return;
     buildIdRef.current = buildId;
 
     const ws = new WebSocket(WS_URL);
+    wsRef.current = ws;
 
     ws.onmessage = (ev) => {
       try {
@@ -22,7 +24,6 @@ export function useBuild() {
         if (msg.type !== "audit_event" || !msg.data) return;
 
         const event = msg.data;
-        // Only process events for our build
         if (event.session_id !== buildIdRef.current) return;
 
         const stageId = event.inputs?.stageId as string | undefined;
@@ -42,6 +43,17 @@ export function useBuild() {
           });
         }
 
+        if (event.action_type === "CLARIFICATION_REQUESTED") {
+          const questions = (event.outputs?.questions ?? []) as string[];
+          if (questions.length > 0) {
+            setClarification(questions);
+          }
+        }
+
+        if (event.action_type === "CLARIFICATION_RESOLVED" || event.action_type === "CLARIFICATION_TIMEOUT") {
+          clearClarification();
+        }
+
         if (event.action_type === "BUILD_COMPLETED") {
           const outputs = event.outputs ?? {};
           const artifacts: BuildArtifacts = {
@@ -59,8 +71,9 @@ export function useBuild() {
 
     return () => {
       ws.close();
+      wsRef.current = null;
     };
-  }, [buildId, updateStage, completeBuild]);
+  }, [buildId, updateStage, completeBuild, setClarification, clearClarification]);
 
   const mutation = useMutation({
     mutationFn: async ({
@@ -87,11 +100,44 @@ export function useBuild() {
     [mutation],
   );
 
+  // Send clarification answers back via WebSocket
+  const sendClarificationResponse = useCallback(
+    (answers: Record<string, string>) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN && buildIdRef.current) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "clarification_response",
+            buildId: buildIdRef.current,
+            payload: answers,
+          }),
+        );
+        clearClarification();
+      }
+    },
+    [clearClarification],
+  );
+
+  // Skip clarification — send empty answers so server times out / proceeds
+  const skipClarification = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN && buildIdRef.current) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: "clarification_response",
+          buildId: buildIdRef.current,
+          payload: { _skipped: "true" },
+        }),
+      );
+      clearClarification();
+    }
+  }, [clearClarification]);
+
   return {
     submit,
     buildId,
     isPending: mutation.isPending,
     isError: mutation.isError,
     error: mutation.error,
+    sendClarificationResponse,
+    skipClarification,
   };
 }

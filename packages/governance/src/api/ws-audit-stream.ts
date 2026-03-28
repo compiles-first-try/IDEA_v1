@@ -1,24 +1,26 @@
 /**
- * WebSocket audit event streaming.
+ * WebSocket audit event streaming (bidirectional).
  *
- * Uses PostgreSQL LISTEN/NOTIFY to broadcast new agent_events
- * to all connected WebSocket clients in real time.
+ * Server → Client: audit events via PostgreSQL LISTEN/NOTIFY
+ * Client → Server: clarification responses during builds
  */
 import { WebSocketServer, type WebSocket } from "ws";
 import type { Server } from "node:http";
 import pg from "pg";
+import type { CacheClient } from "@rsf/foundation";
 
 interface AuditStreamDeps {
   httpServer: Server;
   postgresUrl: string;
+  cache?: CacheClient;
 }
 
 /**
- * Attach a WebSocket server at /audit-stream that broadcasts
- * new agent_events via PostgreSQL LISTEN/NOTIFY.
+ * Attach a bidirectional WebSocket server at /audit-stream.
+ * Broadcasts audit events and accepts clarification responses.
  */
 export function attachAuditStream(deps: AuditStreamDeps): WebSocketServer {
-  const { httpServer, postgresUrl } = deps;
+  const { httpServer, postgresUrl, cache } = deps;
 
   const wss = new WebSocketServer({ server: httpServer, path: "/audit-stream" });
   const clients = new Set<WebSocket>();
@@ -26,6 +28,25 @@ export function attachAuditStream(deps: AuditStreamDeps): WebSocketServer {
   wss.on("connection", (ws) => {
     clients.add(ws);
     ws.send(JSON.stringify({ type: "connected", timestamp: new Date().toISOString() }));
+
+    // Handle incoming messages from clients (clarification responses)
+    ws.on("message", (raw) => {
+      try {
+        const msg = JSON.parse(String(raw)) as {
+          type?: string;
+          buildId?: string;
+          payload?: Record<string, unknown>;
+        };
+
+        if (msg.type === "clarification_response" && msg.buildId && msg.payload && cache) {
+          // Store the answers in Redis for the build endpoint to pick up
+          cache.setJson(`rsf:clarification:${msg.buildId}:response`, msg.payload, 300)
+            .catch(() => {}); // TTL 5 minutes
+        }
+      } catch {
+        // Ignore malformed messages
+      }
+    });
 
     ws.on("close", () => {
       clients.delete(ws);

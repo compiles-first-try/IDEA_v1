@@ -4,10 +4,11 @@ import { useBuild } from "@/hooks/useBuild.ts";
 import { SpecInputFull } from "./SpecInputFull.tsx";
 import { PipelineView } from "./PipelineView.tsx";
 import { ArtifactView } from "./ArtifactView.tsx";
+import { ClarificationChat } from "./ClarificationChat.tsx";
 import type { ReasoningMode } from "@/store/session.ts";
 
 export function BuildPage() {
-  const { busy, stages, artifacts } = useSessionStore();
+  const { busy, stages, artifacts, clarification } = useSessionStore();
   const build = useBuild();
   const [topPct, setTopPct] = useState(40);
   const dragging = useRef(false);
@@ -58,6 +59,17 @@ export function BuildPage() {
           </p>
         )}
       </div>
+
+      {/* Clarification chat — shown when agent has questions */}
+      {clarification && !clarification.answered && (
+        <div className="shrink-0 px-1 py-2">
+          <ClarificationChat
+            questions={clarification.questions}
+            onAnswer={build.sendClarificationResponse}
+            onSkip={build.skipClarification}
+          />
+        </div>
+      )}
 
       {/* Draggable horizontal divider — only shown when pipeline has activity */}
       {hasActivity && (
